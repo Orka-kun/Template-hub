@@ -123,15 +123,12 @@ function TemplatePage() {
       setLoading(true);
       setError(null);
       try {
-        console.log('Fetching template with headers:', { Authorization: `Bearer ${auth.token}` });
         const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/templates/${id}`, {
           headers: { Authorization: `Bearer ${auth.token}` },
         });
-        console.log('Template fetched:', res.data);
         setTemplate(res.data);
         setTags(res.data.tags.map(t => t.name));
       } catch (err) {
-        console.error('Error fetching template:', err);
         if (err.response?.status === 401) {
           setNotifications((prev) => [
             ...prev,
@@ -160,18 +157,15 @@ function TemplatePage() {
         }
       } finally {
         setLoading(false);
-        console.log('Loading state updated:', { loading: false });
       }
     }, 500),
-    [id, auth?.token, t]
+    [id, auth?.token, t, navigate]
   );
 
   // Fetch template on mount
   useEffect(() => {
     if (hasFetched.current) return;
     hasFetched.current = true;
-
-    console.log('useEffect triggered');
     fetchTemplate();
   }, [fetchTemplate]);
 
@@ -188,18 +182,16 @@ function TemplatePage() {
     }
     setIsSavingSettings(true);
     try {
-      // Ensure topic is valid; default to 'Other' if invalid or empty
       const validTopic = template.topic && validTopics.includes(template.topic) ? template.topic : 'Other';
       const updatedTemplate = {
-        title: template.title || '', // Ensure title is not undefined
-        description: template.description || '', // Ensure description is not undefined
+        title: template.title || '',
+        description: template.description || '',
         topic: validTopic,
         image_url: template.image_url || '',
-        is_public: template.is_public || false, // Ensure is_public is not undefined
+        is_public: template.is_public || false,
         tags: tags.filter(tag => tag.trim() !== ''),
-        access: template.access ? template.access.map(a => a.user_id) : [], // Ensure access is not undefined
+        access: template.access ? template.access.map(a => a.user_id) : [],
       };
-      console.log('Saving settings with payload:', updatedTemplate); // Debug log
       await axios.put(
         `${import.meta.env.VITE_API_URL}/api/templates/${id}`,
         updatedTemplate,
@@ -215,7 +207,6 @@ function TemplatePage() {
       setTemplate(res.data);
       setTags(res.data.tags.map(t => t.name));
     } catch (error) {
-      console.error('Error saving settings:', error); // Debug log
       if (error.response?.status === 401) {
         setNotifications((prev) => [
           ...prev,
@@ -314,7 +305,7 @@ function TemplatePage() {
     }
   };
 
-  const handleDeleteQuestion = async questionId => {
+  const handleDeleteQuestion = async (questionId) => {
     if (!auth?.token) {
       setNotifications((prev) => [
         ...prev,
@@ -360,7 +351,7 @@ function TemplatePage() {
     }
   };
 
-  const handleDragEnd = async event => {
+  const handleDragEnd = async (event) => {
     const { active, over } = event;
     if (active.id !== over.id) {
       const oldIndex = template.questions.findIndex(q => q.id === active.id);
@@ -457,7 +448,6 @@ function TemplatePage() {
         value,
       }));
     try {
-      console.log('Submitting form with answers:', formattedAnswers); // Debug log
       await axios.post(
         `${import.meta.env.VITE_API_URL}/api/templates/${id}/form`,
         { answers: formattedAnswers },
@@ -474,7 +464,6 @@ function TemplatePage() {
       });
       setTemplate(updatedTemplate.data);
     } catch (error) {
-      console.error('Error submitting form:', error.response?.data || error.message); // Debug log
       if (error.response?.status === 401) {
         setNotifications((prev) => [
           ...prev,
@@ -700,11 +689,6 @@ function TemplatePage() {
       setIsDeletingTemplate(false);
     }
   };
-
-  // Log loading state changes only when they occur
-  useEffect(() => {
-    console.log('Loading state:', { loading });
-  }, [loading]);
 
   if (loading) {
     return <div className="text-center text-gray-600 dark:text-gray-400">{t('loading')}</div>;
