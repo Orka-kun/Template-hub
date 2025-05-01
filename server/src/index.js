@@ -23,7 +23,7 @@ app.use(limiter);
 // CORS configuration with preflight handling
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'https://course-project-frontend-wdt3.onrender.com'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow methods
     allowedHeaders: ['Content-Type', 'Authorization'], // Explicitly allow headers
