@@ -81,7 +81,7 @@ function PersonalPage() {
     try {
       // Fetch user-created templates
       console.log('Fetching user-created templates for user_id:', authRef.current.user.id);
-      const templatesResponse = await axios.get('http://localhost:5000/api/templates', {
+      const templatesResponse = await axios.get('${import.meta.env.VITE_API_URL}/api/templates', {
         headers: { Authorization: `Bearer ${authRef.current.token}` },
       });
       console.log('Raw templates response:', templatesResponse.data);
@@ -101,7 +101,7 @@ function PersonalPage() {
     try {
       // Fetch templates shared with the user
       console.log('Fetching shared templates for user_id:', authRef.current.user.id);
-      const sharedTemplatesResponse = await axios.get('http://localhost:5000/api/templates/shared', {
+      const sharedTemplatesResponse = await axios.get('${import.meta.env.VITE_API_URL}/api/templates/shared', {
         headers: { Authorization: `Bearer ${authRef.current.token}` },
         params: { user_id: authRef.current.user.id },
       });
@@ -122,7 +122,7 @@ function PersonalPage() {
     try {
       // Fetch forms submitted by the user
       console.log(`Fetching all forms for user_id: ${authRef.current.user.id}`);
-      const formsResponse = await axios.get('http://localhost:5000/api/forms', {
+      const formsResponse = await axios.get('${import.meta.env.VITE_API_URL}/api/forms', {
         headers: { Authorization: `Bearer ${authRef.current.token}` },
         params: { user_id: authRef.current.user.id },
         timeout: 10000,
@@ -172,8 +172,8 @@ function PersonalPage() {
     try {
       const url =
         item.type === 'template' || item.type === 'shared_template'
-          ? `http://localhost:5000/api/templates/${item.id}`
-          : `http://localhost:5000/api/forms/${item.id}`;
+          ? `${import.meta.env.VITE_API_URL}/api/templates/${item.id}`
+          : `${import.meta.env.VITE_API_URL}/api/forms/${item.id}`;
       await axios.delete(url, {
         headers: { Authorization: `Bearer ${authRef.current.token}` },
       });
