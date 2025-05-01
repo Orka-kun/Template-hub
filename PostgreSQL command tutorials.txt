@@ -1,0 +1,19 @@
+1) Go to cmd and run, pg_ctl -D "C:\Program Files\PostgreSQL\17\data" start
+2)Then enter password-postgre
+3)\dt
+
+1)Go to cmd and run cd "C:\Users\Admin\Desktop\Itransition Tasks\Course Project\server"
+
+Inside pgAdmin query tool:
+*Testing user tables:
+SELECT id, email, name FROM "User";
+
+*Check Table names:
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public';
+
+The one who creates the form/template, cannot submit. 
+Other members can see the template as a question exam and they can submit only. 
+Creator of the template cannot submit the form. 
+He can see the results who submitted and the answers of the submission.

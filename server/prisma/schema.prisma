@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int         @id @default(autoincrement())
+  name            String
+  email           String      @unique
+  password        String
+  theme_preference String?    @default("light")
+  language_preference String? @default("en")
+  is_admin        Boolean     @default(false)
+  forms           Form[]
+  templates       Template[]  @relation("CreatedTemplates")
+  templateAccess  TemplateAccess[]
+  comments        Comment[]
+  likes           Like[]
+  notifications   Notification[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
+
+model Template {
+  id              Int         @id @default(autoincrement())
+  title           String
+  description     String?
+  topic           String?
+  image_url       String?
+  is_public       Boolean     @default(false)
+  created_by      Int
+  creator         User        @relation("CreatedTemplates", references: [id], fields: [created_by])
+  questions       Question[]
+  forms           Form[]
+  comments        Comment[]
+  likes           Like[]
+  tags            TemplateTag[]
+  access          TemplateAccess[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
+
+model Question {
+  id              Int         @id @default(autoincrement())
+  template_id     Int
+  template        Template    @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  type            String
+  title           String
+  description     String?
+  order           Int?
+  fixed           Boolean     @default(false)
+  is_shown_in_table Boolean   @default(false)
+  required        Boolean     @default(false) // Added required field
+  answers         Answer[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
+
+model Form {
+  id              Int         @id @default(autoincrement())
+  template_id     Int
+  template        Template    @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  user_id         Int
+  user            User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  answers         Answer[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
+
+model Answer {
+  id              Int         @id @default(autoincrement())
+  form_id         Int
+  form            Form        @relation(fields: [form_id], references: [id], onDelete: Cascade)
+  question_id     Int
+  question        Question    @relation(fields: [question_id], references: [id], onDelete: Cascade)
+  value           String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
+
+model Comment {
+  id              Int         @id @default(autoincrement())
+  template_id     Int
+  template        Template    @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  user_id         Int
+  user            User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  content         String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
+
+model Like {
+  template_id     Int
+  user_id         Int
+  template        Template    @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+  @@id([template_id, user_id])
+}
+
+model Tag {
+  id              Int         @id @default(autoincrement())
+  name            String      @unique
+  templates       TemplateTag[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
+
+model TemplateTag {
+  template_id     Int
+  tag_id          Int
+  template        Template    @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  tag             Tag         @relation(fields: [tag_id], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+  @@id([template_id, tag_id])
+}
+
+model TemplateAccess {
+  template_id     Int
+  user_id         Int
+  template        Template    @relation(fields: [template_id], references: [id], onDelete: Cascade)
+  user            User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+  @@id([template_id, user_id])
+}
+
+model Notification {
+  id              Int         @id @default(autoincrement())
+  user_id         Int
+  user            User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  message         String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime?   @updatedAt
+}
