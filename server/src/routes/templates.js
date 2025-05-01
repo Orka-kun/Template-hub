@@ -1,6 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const authenticate = require('../middleware/Authenticate');
+const authenticate = require('../middleware/authenticate');
 const { marked } = require('marked');
 const jwt = require('jsonwebtoken');
 
