@@ -19,7 +19,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false); // Add loading state to prevent multiple submissions
-  const { login, notifications, addNotification } = useAuth();
+  const { login, notifications } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -30,19 +30,16 @@ export default function Login() {
     try {
       console.log('Attempting login with:', { email, password });
       await login(email, password);
-      console.log('Login successful, adding notification and navigating...');
-      addNotification('Login successful', 'success');
-      navigate('/personal'); // Redirect to personal page after successful login
     } catch (error) {
       console.error('Login failed:', error.message);
-      addNotification('Login failed: ' + error.message, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   const removeNotification = (id) => {
-    addNotification('', '', id); // Assuming AuthContext handles removal with an ID
+    // Notifications are managed in AuthContext; this is a placeholder for removal
+    // Assuming AuthContext handles removal with an ID
   };
 
   return (
