@@ -4,6 +4,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
+// Utility to strip HTML tags
+const stripHtmlTags = (html) => {
+  if (!html) return '';
+  return html.replace(/<[^>]+>/g, '');
+};
+
 // Debounce utility to prevent rapid API calls
 const debounce = (func, delay) => {
   let timeoutId;
@@ -128,7 +134,7 @@ function Home() {
                   {template.title}
                 </h3>
                 <p className="text-gray-700 dark:text-gray-300 mb-1">
-                  {template.description}
+                  {stripHtmlTags(template.description)}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400">
                   {t('home.author')}: {template.user?.name || t('home.unknown_author')}
@@ -251,12 +257,12 @@ export default Home;
 //       setError(null);
 //       try {
 //         const headers = auth?.token ? { Authorization: `Bearer ${auth.token}` } : {};
-//         console.log('Fetching data with headers:', headers); // This will now log only once
+//         console.log('Fetching data with headers:', headers);
 
-//         // Use relative URL if proxy is set up in vite.config.js
+//         // Use VITE_API_URL for backend API calls
 //         const [templatesRes, tagsRes] = await Promise.all([
-//           axios.get('/api/templates', { headers }),
-//           axios.get('/api/tags', { headers }),
+//           axios.get(`${import.meta.env.VITE_API_URL}/api/templates`, { headers }),
+//           axios.get(`${import.meta.env.VITE_API_URL}/api/tags`, { headers }),
 //         ]);
 
 //         setLatestTemplates(templatesRes.data.slice(0, 6) || []);
@@ -312,94 +318,87 @@ export default Home;
 //     <div className="container mx-auto p-4 bg-white dark:bg-gray-900 min-h-screen">
 //       <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">{t('home.title')} ✓</h1>
 //       <section className="mb-8 max-w-xl mx-auto">
-//     <h2 className="text-2xl font-semibold mb-4 text-center text-gray-900 dark:text-white">
-//       {t('home.latest')}
-//     </h2>
+//         <h2 className="text-2xl font-semibold mb-4 text-center text-gray-900 dark:text-white">
+//           {t('home.latest')}
+//         </h2>
 
-//     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 justify-items-center">
-//       {latestTemplates.length > 0 ? (
-//         latestTemplates.map((template) => (
-//           <Link
-//             to={`/templates/${template.id}`}
-//             key={template.id}
-//             className="w-full max-w-xs border p-4 rounded bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-center"
-//           >
-//             {/* Uncomment image if needed */}
-//             {/* <img
-//               src={template.image_url || 'https://placehold.co/150x150'}
-//               alt={template.title}
-//               onError={(e) => {
-//                 e.target.src = 'https://placehold.co/150x150';
-//               }}
-//               className="w-full h-32 object-cover mb-2 rounded"
-//             /> */}
-//             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
-//               {template.title}
-//             </h3>
-//             <p className="text-gray-700 dark:text-gray-300 mb-1">
-//               {template.description}
+//         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 justify-items-center">
+//           {latestTemplates.length > 0 ? (
+//             latestTemplates.map((template) => (
+//               <Link
+//                 to={`/templates/${template.id}`}
+//                 key={template.id}
+//                 className="w-full max-w-xs border p-4 rounded bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-center"
+//               >
+//                 {/* Uncomment image if needed */}
+//                 {/* <img
+//                   src={template.image_url || 'https://placehold.co/150x150'}
+//                   alt={template.title}
+//                   onError={(e) => {
+//                     e.target.src = 'https://placehold.co/150x150';
+//                   }}
+//                   className="w-full h-32 object-cover mb-2 rounded"
+//                 /> */}
+//                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+//                   {template.title}
+//                 </h3>
+//                 <p className="text-gray-700 dark:text-gray-300 mb-1">
+//                   {template.description}
+//                 </p>
+//                 <p className="text-gray-600 dark:text-gray-400">
+//                   {t('home.author')}: {template.user?.name || t('home.unknown_author')}
+//                 </p>
+//               </Link>
+//             ))
+//           ) : (
+//             <p className="text-center text-gray-600 dark:text-gray-400">
+//               {t('home.no_templates')}
 //             </p>
-//             <p className="text-gray-600 dark:text-gray-400">
-//               {t('home.author')}: {template.user?.name || t('home.unknown_author')}
-//             </p>
-//           </Link>
-//         ))
-//       ) : (
-//         <p className="text-center text-gray-600 dark:text-gray-400">
-//           {t('home.no_templates')}
-//         </p>
-//       )}
-//     </div>
-//   </section>
+//           )}
+//         </div>
+//       </section>
 //       <section className="mb-8">
 //         <h2 className="text-2xl mb-6 text-gray-900 dark:text-white text-center">{t('home.top')}</h2>
         
 //         <div className="overflow-x-auto max-w-xl mx-auto">
-//   <table className="min-w-full border border-gray-300 dark:border-gray-700 text-center">
-//     <thead>
-//       <tr className="bg-gray-100 dark:bg-gray-800">
-//         <th className="p-2 align-middle font-medium border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
-//           {t('home.tableName')}
-//         </th>
-//         <th className="p-2 align-middle font-medium border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
-//           {t('home.tableSubmissions')}
-//         </th>
-//         {/* <th className="p-2 align-middle font-medium border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
-//           Templates
-//         </th>
-//         <th className="p-2 align-middle font-medium border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
-//           Submissions
-//         </th> */}
-//       </tr>
-//     </thead>
-//     <tbody>
-//       {topTemplates.length > 0 ? (
-//         topTemplates.map((template) => (
-//           <tr key={template.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-//             <td className="p-2 align-middle border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
-//               <Link to={`/templates/${template.id}`} className="text-blue-600 hover:underline">
-//                 {template.title}
-//               </Link>
-//             </td>
-//             <td className="p-2 align-middle border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
-//               {template.forms?.length || 0}
-//             </td>
-//           </tr>
-//         ))
-//       ) : (
-//         <tr>
-//           <td
-//             colSpan="2"
-//             className="p-2 align-middle border-b border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400"
-//           >
-//             {t('home.no_templates')}
-//           </td>
-//         </tr>
-//       )}
-//     </tbody>
-//   </table>
-// </div>
-
+//           <table className="min-w-full border border-gray-300 dark:border-gray-700 text-center">
+//             <thead>
+//               <tr className="bg-gray-100 dark:bg-gray-800">
+//                 <th className="p-2 align-middle font-medium border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
+//                   {t('home.tableName')}
+//                 </th>
+//                 <th className="p-2 align-middle font-medium border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
+//                   {t('home.tableSubmissions')}
+//                 </th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               {topTemplates.length > 0 ? (
+//                 topTemplates.map((template) => (
+//                   <tr key={template.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+//                     <td className="p-2 align-middle border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
+//                       <Link to={`/templates/${template.id}`} className="text-blue-600 hover:underline">
+//                         {template.title}
+//                       </Link>
+//                     </td>
+//                     <td className="p-2 align-middle border-b border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white">
+//                       {template.forms?.length || 0}
+//                     </td>
+//                   </tr>
+//                 ))
+//               ) : (
+//                 <tr>
+//                   <td
+//                     colSpan="2"
+//                     className="p-2 align-middle border-b border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400"
+//                   >
+//                     {t('home.no_templates')}
+//                   </td>
+//                 </tr>
+//               )}
+//             </tbody>
+//           </table>
+//         </div>
 //       </section>
 //       <section>
 //         {/* <h2 className="text-2xl mb-2 text-gray-900 dark:text-white">{t('home.tags')}</h2>
