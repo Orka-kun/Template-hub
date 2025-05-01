@@ -28,17 +28,19 @@ const validTopics = ['Education', 'Quiz', 'Other'];
 
 // GET /templates - Fetch all templates (public or user-specific)
 router.get('/', async (req, res) => {
-  console.log('Received GET /api/templates request'); // Add this log
+  console.log('Received GET /api/templates request');
   try {
     let user = null;
     if (req.headers.authorization) {
       try {
         const token = req.headers.authorization.replace('Bearer ', '');
         user = await jwt.verify(token, process.env.JWT_SECRET);
-        console.log('Authenticated user for GET /templates:', user.id);
+        console.log('Authenticated user for GET /api/templates:', user.id);
       } catch (error) {
-        console.log('No valid token provided for GET /templates, proceeding as unauthenticated');
+        console.log('No valid token provided for GET /api/templates, proceeding as unauthenticated:', error.message);
       }
+    } else {
+      console.log('No Authorization header provided for GET /api/templates, proceeding as unauthenticated');
     }
 
     const templates = await prisma.template.findMany({
@@ -77,7 +79,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-//NEW SHARED ROUTE
 // GET /templates/shared - Fetch templates shared with the user
 router.get('/shared', authenticate, async (req, res) => {
   try {
@@ -123,7 +124,6 @@ router.get('/shared', authenticate, async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch shared templates', details: error.message });
   }
 });
-
 
 // GET /templates/:id - Fetch a specific template
 router.get('/:id', authenticate, async (req, res) => {
@@ -288,7 +288,7 @@ router.post('/', authenticate, async (req, res) => {
   }
 
   try {
-    console.log('Received POST /templates request with body:', req.body);
+    console.log('Received POST /api/templates request with body:', req.body);
 
     const questions = fields?.map((field, index) => ({
       type: field.type,
@@ -383,7 +383,7 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 
   if (!req.user) {
-    console.log('User not authenticated for PUT /templates');
+    console.log('User not authenticated for PUT /api/templates');
     return res.status(401).json({ error: 'Authentication required' });
   }
   if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -416,7 +416,7 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received PUT /templates/${id} request with body:`, req.body);
+    console.log(`Received PUT /api/templates/${id} request with body:`, req.body);
 
     // Fetch the existing template
     const template = await prisma.template.findUnique({
@@ -539,7 +539,7 @@ router.put('/:id', authenticate, async (req, res) => {
       ...updatedTemplate,
       user: updatedTemplate.creator || { name: 'Unknown User' },
       tags: updatedTemplate.tags.map((tt) => tt.tag),
-      description: await prisma.description || '',
+      description: await marked.parse(updatedTemplate.description || ''), // Fixed: Correctly apply marked.parse
       createdAt: updatedTemplate.createdAt,
     });
   } catch (error) {
@@ -561,7 +561,7 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received DELETE /templates/${id} request`);
+    console.log(`Received DELETE /api/templates/${id} request`);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
     });
@@ -626,7 +626,7 @@ router.post('/:id/questions', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received POST /templates/${id}/questions request with body:`, req.body);
+    console.log(`Received POST /api/templates/${id}/questions request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
       include: { questions: true },
@@ -682,7 +682,7 @@ router.delete('/:id/questions/:questionId', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received DELETE /templates/${id}/questions/${questionId} request`);
+    console.log(`Received DELETE /api/templates/${id}/questions/${questionId} request`);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
     });
@@ -747,7 +747,7 @@ router.put('/:id/questions/order', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received PUT /templates/${id}/questions/order request with body:`, req.body);
+    console.log(`Received PUT /api/templates/${id}/questions/order request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
       include: { questions: true },
@@ -813,7 +813,7 @@ router.post('/:id/form', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received POST /templates/${id}/form request with body:`, req.body);
+    console.log(`Received POST /api/templates/${id}/form request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
       include: { questions: true, access: true },
@@ -941,7 +941,7 @@ router.put('/forms/:formId', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received PUT /forms/${formId} request with body:`, req.body);
+    console.log(`Received PUT /api/forms/${formId} request with body:`, req.body);
     const form = await prisma.form.findUnique({
       where: { id: parseInt(formId) },
       include: { template: { include: { questions: true } } },
@@ -1005,7 +1005,7 @@ router.delete('/forms/:formId', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received DELETE /forms/${formId} request`);
+    console.log(`Received DELETE /api/forms/${formId} request`);
     const form = await prisma.form.findUnique({
       where: { id: parseInt(formId) },
       include: { template: true },
@@ -1048,7 +1048,7 @@ router.post('/:id/comments', authenticate, async (req, res) => {
 
   // Input validation
   if (!req.user) {
-    console.log('User not authenticated for POST /comments');
+    console.log('User not authenticated for POST /api/comments');
     return res.status(401).json({ error: 'Authentication required' });
   }
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
@@ -1057,7 +1057,7 @@ router.post('/:id/comments', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received POST /templates/${id}/comments request`);
+    console.log(`Received POST /api/templates/${id}/comments request`);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
       include: {
@@ -1139,7 +1139,7 @@ router.put('/comments/:commentId', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received PUT /comments/${commentId} request with body:`, req.body);
+    console.log(`Received PUT /api/comments/${commentId} request with body:`, req.body);
     const comment = await prisma.comment.findUnique({
       where: { id: parseInt(commentId) },
     });
@@ -1179,7 +1179,7 @@ router.delete('/comments/:commentId', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received DELETE /comments/${commentId} request`);
+    console.log(`Received DELETE /api/comments/${commentId} request`);
     const comment = await prisma.comment.findUnique({
       where: { id: parseInt(commentId) },
     });
@@ -1215,7 +1215,7 @@ router.post('/:id/likes', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received POST /templates/${id}/likes request`);
+    console.log(`Received POST /api/templates/${id}/likes request`);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
     });
@@ -1262,7 +1262,7 @@ router.delete('/:id/likes', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received DELETE /templates/${id}/likes request`);
+    console.log(`Received DELETE /api/templates/${id}/likes request`);
     const like = await prisma.like.findUnique({
       where: { template_id_user_id: { template_id: parseInt(id), user_id: req.user.id } },
     });
@@ -1295,7 +1295,7 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received POST /templates/${id}/duplicate request`);
+    console.log(`Received POST /api/templates/${id}/duplicate request`);
     const original = await prisma.template.findUnique({
       where: { id: parseInt(id) },
       include: { questions: true, tags: { include: { tag: true } } },
@@ -1368,7 +1368,7 @@ router.post('/:id/share', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received POST /templates/${id}/share request with body:`, req.body);
+    console.log(`Received POST /api/templates/${id}/share request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
       include: { creator: { select: { name: true } } },
@@ -1414,6 +1414,7 @@ router.post('/:id/share', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+
 // const express = require('express');
 // const { PrismaClient } = require('@prisma/client');
 // const authenticate = require('../middleware/authenticate');
