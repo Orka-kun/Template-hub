@@ -18,23 +18,30 @@ function Notification({ message, type, onClose }) {
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Add loading state to prevent multiple submissions
   const { login, notifications, addNotification } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return; // Prevent multiple submissions
+    setIsLoading(true);
+
     try {
+      console.log('Attempting login with:', { email, password });
       await login(email, password);
+      console.log('Login successful, adding notification and navigating...');
       addNotification('Login successful', 'success');
       navigate('/personal'); // Redirect to personal page after successful login
     } catch (error) {
       console.error('Login failed:', error.message);
       addNotification('Login failed: ' + error.message, 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const removeNotification = (id) => {
-    // Notifications should be managed in AuthContext; for now, we trigger a re-render
     addNotification('', '', id); // Assuming AuthContext handles removal with an ID
   };
 
@@ -77,9 +84,10 @@ export default function Login() {
           </div>
           <button
             type="submit"
+            disabled={isLoading}
             className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Login
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         <p className="mt-4 text-gray-600 dark:text-gray-400">
