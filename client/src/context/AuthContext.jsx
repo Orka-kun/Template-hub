@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const res = await axios.post('${import.meta.env.VITE_API_URL}/api/auth/login', { email, password });
       const { token, user } = res.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (name, email, password) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', { name, email, password });
+      const res = await axios.post('${import.meta.env.VITE_API_URL}/api/auth/register', { name, email, password });
       const { token, user } = res.data;
       // Do not log in automatically; just show a success message and redirect to login
       addNotification('Registration successful! Please log in.', 'success');
