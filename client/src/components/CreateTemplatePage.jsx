@@ -60,7 +60,7 @@ function CreateTemplatePage() {
 
     try {
       const response = await axios.post(
-        'http://localhost:5000/api/templates',
+        '${import.meta.env.VITE_API_URL}/api/templates',
         payload,
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
