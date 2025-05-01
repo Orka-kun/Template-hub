@@ -1,7 +1,6 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const authenticate = require('../middleware/authenticate');
-const { marked } = require('marked');
 const jwt = require('jsonwebtoken');
 
 const router = express.Router();
@@ -60,15 +59,13 @@ router.get('/', async (req, res) => {
       },
     });
 
-    const processedTemplates = await Promise.all(
-      templates.map(async (t) => ({
-        ...t,
-        user: t.creator || { name: 'Unknown User' }, // Fallback for creator
-        tags: t.tags.map((tt) => tt.tag),
-        description: await marked.parse(t.description || ''),
-        createdAt: t.createdAt,
-      }))
-    );
+    const processedTemplates = templates.map((t) => ({
+      ...t,
+      user: t.creator || { name: 'Unknown User' }, // Fallback for creator
+      tags: t.tags.map((tt) => tt.tag),
+      description: t.description || '', // Return plain text
+      createdAt: t.createdAt,
+    }));
 
     console.log('Templates fetched successfully:', processedTemplates.length);
     res.json(processedTemplates);
@@ -106,15 +103,13 @@ router.get('/shared', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'No shared templates found' });
     }
 
-    const processedTemplates = await Promise.all(
-      templates.map(async (t) => ({
-        ...t,
-        user: t.creator || { name: 'Unknown User' },
-        tags: t.tags.map((tt) => tt.tag),
-        description: await marked.parse(t.description || ''),
-        createdAt: t.createdAt,
-      }))
-    );
+    const processedTemplates = templates.map((t) => ({
+      ...t,
+      user: t.creator || { name: 'Unknown User' },
+      tags: t.tags.map((tt) => tt.tag),
+      description: t.description || '', // Return plain text
+      createdAt: t.createdAt,
+    }));
 
     console.log(`Shared templates fetched successfully for user_id: ${userId}:`, processedTemplates.length);
     res.json(processedTemplates);
@@ -221,7 +216,7 @@ router.get('/:id', authenticate, async (req, res) => {
       ...template,
       user: creator,
       tags: (template.tags || []).map((tt) => tt.tag),
-      description: await marked.parse(template.description || ''),
+      description: template.description || '', // Return plain text
       aggregation,
       createdAt: template.createdAt,
     };
@@ -310,27 +305,7 @@ router.post('/', authenticate, async (req, res) => {
         created_by: req.user.id,
         createdAt: new Date(),
         questions: {
-          create: [
-            ...questions,
-            {
-              type: 'fixed_user',
-              title: 'User',
-              description: 'Submitting user',
-              fixed: true,
-              order: -2,
-              is_shown_in_table: true,
-              required: true,
-            },
-            {
-              type: 'fixed_date',
-              title: 'Date',
-              description: 'Submission date',
-              fixed: true,
-              order: -1,
-              is_shown_in_table: true,
-              required: true,
-            },
-          ],
+          create: questions, // Removed fixed_user and fixed_date questions
         },
         tags: tags
           ? {
@@ -359,7 +334,7 @@ router.post('/', authenticate, async (req, res) => {
       ...template,
       user: template.creator,
       tags: template.tags.map((tt) => tt.tag),
-      description: await marked.parse(template.description || ''),
+      description: template.description || '', // Return plain text
       createdAt: template.createdAt,
     });
   } catch (error) {
@@ -539,7 +514,7 @@ router.put('/:id', authenticate, async (req, res) => {
       ...updatedTemplate,
       user: updatedTemplate.creator || { name: 'Unknown User' },
       tags: updatedTemplate.tags.map((tt) => tt.tag),
-      description: await marked.parse(updatedTemplate.description || ''), // Fixed: Correctly apply marked.parse
+      description: updatedTemplate.description || '', // Return plain text
       createdAt: updatedTemplate.createdAt,
     });
   } catch (error) {
@@ -844,20 +819,10 @@ router.post('/:id/form', authenticate, async (req, res) => {
         user_id: req.user.id,
         createdAt: new Date(),
         answers: {
-          create: [
-            ...answers.map((answer) => ({
-              question_id: answer.question_id,
-              value: answer.value.toString(),
-            })),
-            {
-              question_id: template.questions.find((q) => q.type === 'fixed_user').id,
-              value: req.user.email,
-            },
-            {
-              question_id: template.questions.find((q) => q.type === 'fixed_date').id,
-              value: new Date().toISOString(),
-            },
-          ],
+          create: answers.map((answer) => ({
+            question_id: answer.question_id,
+            value: answer.value.toString(),
+          })), // Removed fixed_user and fixed_date answers
         },
       },
       include: {
@@ -967,20 +932,10 @@ router.put('/forms/:formId', authenticate, async (req, res) => {
       where: { id: parseInt(formId) },
       data: {
         answers: {
-          create: [
-            ...answers.map((answer) => ({
-              question_id: answer.question_id,
-              value: answer.value.toString(),
-            })),
-            {
-              question_id: form.template.questions.find((q) => q.type === 'fixed_user').id,
-              value: req.user.email,
-            },
-            {
-              question_id: form.template.questions.find((q) => q.type === 'fixed_date').id,
-              value: new Date().toISOString(),
-            },
-          ],
+          create: answers.map((answer) => ({
+            question_id: answer.question_id,
+            value: answer.value.toString(),
+          })), // Removed fixed_user and fixed_date answers
         },
       },
       include: { answers: { include: { question: true } }, user: true },
@@ -1341,7 +1296,7 @@ router.post('/:id/duplicate', authenticate, async (req, res) => {
       ...duplicate,
       user: duplicate.creator || { name: 'Unknown User' },
       tags: duplicate.tags.map((tt) => tt.tag),
-      description: await marked.parse(duplicate.description || ''),
+      description: duplicate.description || '', // Return plain text
       createdAt: duplicate.createdAt,
     });
   } catch (error) {
@@ -1414,7 +1369,6 @@ router.post('/:id/share', authenticate, async (req, res) => {
 });
 
 module.exports = router;
-
 // const express = require('express');
 // const { PrismaClient } = require('@prisma/client');
 // const authenticate = require('../middleware/authenticate');
@@ -1445,16 +1399,19 @@ module.exports = router;
 
 // // GET /templates - Fetch all templates (public or user-specific)
 // router.get('/', async (req, res) => {
+//   console.log('Received GET /api/templates request');
 //   try {
 //     let user = null;
 //     if (req.headers.authorization) {
 //       try {
 //         const token = req.headers.authorization.replace('Bearer ', '');
 //         user = await jwt.verify(token, process.env.JWT_SECRET);
-//         console.log('Authenticated user for GET /templates:', user.id);
+//         console.log('Authenticated user for GET /api/templates:', user.id);
 //       } catch (error) {
-//         console.log('No valid token provided for GET /templates, proceeding as unauthenticated');
+//         console.log('No valid token provided for GET /api/templates, proceeding as unauthenticated:', error.message);
 //       }
+//     } else {
+//       console.log('No Authorization header provided for GET /api/templates, proceeding as unauthenticated');
 //     }
 
 //     const templates = await prisma.template.findMany({
@@ -1493,7 +1450,6 @@ module.exports = router;
 //   }
 // });
 
-// //NEW SHARED ROUTE
 // // GET /templates/shared - Fetch templates shared with the user
 // router.get('/shared', authenticate, async (req, res) => {
 //   try {
@@ -1539,7 +1495,6 @@ module.exports = router;
 //     res.status(500).json({ error: 'Failed to fetch shared templates', details: error.message });
 //   }
 // });
-
 
 // // GET /templates/:id - Fetch a specific template
 // router.get('/:id', authenticate, async (req, res) => {
@@ -1704,7 +1659,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log('Received POST /templates request with body:', req.body);
+//     console.log('Received POST /api/templates request with body:', req.body);
 
 //     const questions = fields?.map((field, index) => ({
 //       type: field.type,
@@ -1799,7 +1754,7 @@ module.exports = router;
 //   }
 
 //   if (!req.user) {
-//     console.log('User not authenticated for PUT /templates');
+//     console.log('User not authenticated for PUT /api/templates');
 //     return res.status(401).json({ error: 'Authentication required' });
 //   }
 //   if (!title || typeof title !== 'string' || title.trim().length === 0) {
@@ -1832,7 +1787,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received PUT /templates/${id} request with body:`, req.body);
+//     console.log(`Received PUT /api/templates/${id} request with body:`, req.body);
 
 //     // Fetch the existing template
 //     const template = await prisma.template.findUnique({
@@ -1955,7 +1910,7 @@ module.exports = router;
 //       ...updatedTemplate,
 //       user: updatedTemplate.creator || { name: 'Unknown User' },
 //       tags: updatedTemplate.tags.map((tt) => tt.tag),
-//       description: await marked.parse(updatedTemplate.description || ''),
+//       description: await marked.parse(updatedTemplate.description || ''), // Fixed: Correctly apply marked.parse
 //       createdAt: updatedTemplate.createdAt,
 //     });
 //   } catch (error) {
@@ -1977,7 +1932,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received DELETE /templates/${id} request`);
+//     console.log(`Received DELETE /api/templates/${id} request`);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //     });
@@ -2042,7 +1997,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received POST /templates/${id}/questions request with body:`, req.body);
+//     console.log(`Received POST /api/templates/${id}/questions request with body:`, req.body);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //       include: { questions: true },
@@ -2098,7 +2053,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received DELETE /templates/${id}/questions/${questionId} request`);
+//     console.log(`Received DELETE /api/templates/${id}/questions/${questionId} request`);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //     });
@@ -2163,7 +2118,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received PUT /templates/${id}/questions/order request with body:`, req.body);
+//     console.log(`Received PUT /api/templates/${id}/questions/order request with body:`, req.body);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //       include: { questions: true },
@@ -2229,7 +2184,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received POST /templates/${id}/form request with body:`, req.body);
+//     console.log(`Received POST /api/templates/${id}/form request with body:`, req.body);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //       include: { questions: true, access: true },
@@ -2357,7 +2312,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received PUT /forms/${formId} request with body:`, req.body);
+//     console.log(`Received PUT /api/forms/${formId} request with body:`, req.body);
 //     const form = await prisma.form.findUnique({
 //       where: { id: parseInt(formId) },
 //       include: { template: { include: { questions: true } } },
@@ -2421,7 +2376,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received DELETE /forms/${formId} request`);
+//     console.log(`Received DELETE /api/forms/${formId} request`);
 //     const form = await prisma.form.findUnique({
 //       where: { id: parseInt(formId) },
 //       include: { template: true },
@@ -2464,7 +2419,7 @@ module.exports = router;
 
 //   // Input validation
 //   if (!req.user) {
-//     console.log('User not authenticated for POST /comments');
+//     console.log('User not authenticated for POST /api/comments');
 //     return res.status(401).json({ error: 'Authentication required' });
 //   }
 //   if (!content || typeof content !== 'string' || content.trim().length === 0) {
@@ -2473,7 +2428,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received POST /templates/${id}/comments request`);
+//     console.log(`Received POST /api/templates/${id}/comments request`);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //       include: {
@@ -2555,7 +2510,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received PUT /comments/${commentId} request with body:`, req.body);
+//     console.log(`Received PUT /api/comments/${commentId} request with body:`, req.body);
 //     const comment = await prisma.comment.findUnique({
 //       where: { id: parseInt(commentId) },
 //     });
@@ -2595,7 +2550,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received DELETE /comments/${commentId} request`);
+//     console.log(`Received DELETE /api/comments/${commentId} request`);
 //     const comment = await prisma.comment.findUnique({
 //       where: { id: parseInt(commentId) },
 //     });
@@ -2631,7 +2586,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received POST /templates/${id}/likes request`);
+//     console.log(`Received POST /api/templates/${id}/likes request`);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //     });
@@ -2678,7 +2633,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received DELETE /templates/${id}/likes request`);
+//     console.log(`Received DELETE /api/templates/${id}/likes request`);
 //     const like = await prisma.like.findUnique({
 //       where: { template_id_user_id: { template_id: parseInt(id), user_id: req.user.id } },
 //     });
@@ -2711,7 +2666,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received POST /templates/${id}/duplicate request`);
+//     console.log(`Received POST /api/templates/${id}/duplicate request`);
 //     const original = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //       include: { questions: true, tags: { include: { tag: true } } },
@@ -2784,7 +2739,7 @@ module.exports = router;
 //   }
 
 //   try {
-//     console.log(`Received POST /templates/${id}/share request with body:`, req.body);
+//     console.log(`Received POST /api/templates/${id}/share request with body:`, req.body);
 //     const template = await prisma.template.findUnique({
 //       where: { id: parseInt(id) },
 //       include: { creator: { select: { name: true } } },
@@ -2830,3 +2785,4 @@ module.exports = router;
 // });
 
 // module.exports = router;
+
