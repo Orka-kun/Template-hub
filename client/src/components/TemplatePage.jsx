@@ -124,7 +124,7 @@ function TemplatePage() {
       setError(null);
       try {
         console.log('Fetching template with headers:', { Authorization: `Bearer ${auth.token}` });
-        const res = await axios.get(`http://localhost:5000/api/templates/${id}`, {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/templates/${id}`, {
           headers: { Authorization: `Bearer ${auth.token}` },
         });
         console.log('Template fetched:', res.data);
@@ -201,7 +201,7 @@ function TemplatePage() {
       };
       console.log('Saving settings with payload:', updatedTemplate); // Debug log
       await axios.put(
-        `http://localhost:5000/api/templates/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/templates/${id}`,
         updatedTemplate,
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
@@ -209,7 +209,7 @@ function TemplatePage() {
         ...prev,
         { id: Date.now(), message: t('template.template_saved'), type: 'success' },
       ]);
-      const res = await axios.get(`http://localhost:5000/api/templates/${id}`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/templates/${id}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       setTemplate(res.data);
@@ -277,7 +277,7 @@ function TemplatePage() {
     };
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/templates/${id}/questions`,
+        `${import.meta.env.VITE_API_URL}/api/templates/${id}/questions`,
         newQuestion,
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
@@ -324,7 +324,7 @@ function TemplatePage() {
       return;
     }
     try {
-      await axios.delete(`http://localhost:5000/api/templates/${id}/questions/${questionId}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/templates/${id}/questions/${questionId}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       setTemplate({
@@ -379,7 +379,7 @@ function TemplatePage() {
       }
       try {
         await axios.put(
-          `http://localhost:5000/api/templates/${id}/questions/order`,
+          `${import.meta.env.VITE_API_URL}/api/templates/${id}/questions/order`,
           newQuestions.map((q, index) => ({ id: q.id, order: index })),
           { headers: { Authorization: `Bearer ${auth.token}` } }
         );
@@ -459,7 +459,7 @@ function TemplatePage() {
     try {
       console.log('Submitting form with answers:', formattedAnswers); // Debug log
       await axios.post(
-        `http://localhost:5000/api/templates/${id}/form`,
+        `${import.meta.env.VITE_API_URL}/api/templates/${id}/form`,
         { answers: formattedAnswers },
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
@@ -469,7 +469,7 @@ function TemplatePage() {
       ]);
       setAnswers({});
       setFormErrors({});
-      const updatedTemplate = await axios.get(`http://localhost:5000/api/templates/${id}`, {
+      const updatedTemplate = await axios.get(`${import.meta.env.VITE_API_URL}/api/templates/${id}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       setTemplate(updatedTemplate.data);
@@ -520,7 +520,7 @@ function TemplatePage() {
     setIsAddingComment(true);
     try {
       const res = await axios.post(
-        `http://localhost:5000/api/templates/${id}/comments`,
+        `${import.meta.env.VITE_API_URL}/api/templates/${id}/comments`,
         { content: comment },
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
@@ -605,7 +605,7 @@ function TemplatePage() {
     setIsSharing(true);
     try {
       await axios.post(
-        `http://localhost:5000/api/templates/${id}/share`,
+        `${import.meta.env.VITE_API_URL}/api/templates/${id}/share`,
         { email: shareEmail },
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
@@ -615,7 +615,7 @@ function TemplatePage() {
       ]);
       setShareEmail('');
       setShareError('');
-      const res = await axios.get(`http://localhost:5000/api/templates/${id}`, {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/templates/${id}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       setTemplate(res.data);
@@ -660,7 +660,7 @@ function TemplatePage() {
       return;
     setIsDeletingTemplate(true);
     try {
-      await axios.delete(`http://localhost:5000/api/templates/${id}`, {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/api/templates/${id}`, {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       setNotifications((prev) => [
