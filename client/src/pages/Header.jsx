@@ -49,7 +49,7 @@ function Header({ changeLanguage }) {
           memoizedNavigate('/login');
         }
       }
-    }, 500), // 500ms debounce delay
+    }, 500),
     [auth?.token, i18n, memoizedNavigate, memoizedLogout, t]
   );
 
@@ -88,26 +88,31 @@ function Header({ changeLanguage }) {
 
   const handleLanguageChange = useCallback(
     debounce(async (lang) => {
-      if (!auth?.token) {
-        memoizedNavigate('/login');
-        return;
-      }
-      try {
-        await axios.put(
-          `${import.meta.env.VITE_API_URL}/api/auth/profile`,
-          { language_preference: lang },
-          { headers: { Authorization: `Bearer ${auth.token}` } }
-        );
+      if (auth?.token) {
+        // For authenticated users, update via API
+        try {
+          await axios.put(
+            `${import.meta.env.VITE_API_URL}/api/auth/profile`,
+            { language_preference: lang },
+            { headers: { Authorization: `Bearer ${auth.token}` } }
+          );
+          setLanguage(lang);
+          i18n.changeLanguage(lang);
+          changeLanguage(lang);
+        } catch (err) {
+          console.error('Failed to update language preference:', err.response?.data?.error || err.message);
+          setError(t('header.error_updating_language', { error: err.response?.data?.error || err.message }));
+          if (err.response?.status === 401) {
+            memoizedLogout();
+            memoizedNavigate('/login');
+          }
+        }
+      } else {
+        // For unauthenticated users, change locally and persist
         setLanguage(lang);
         i18n.changeLanguage(lang);
-        changeLanguage(lang);
-      } catch (err) {
-        console.error('Failed to update language preference:', err.response?.data?.error || err.message);
-        setError(t('header.error_updating_language', { error: err.response?.data?.error || err.message }));
-        if (err.response?.status === 401) {
-          memoizedLogout();
-          memoizedNavigate('/login');
-        }
+        localStorage.setItem('language', lang); // Persist language choice
+        if (changeLanguage) changeLanguage(lang);
       }
     }, 500),
     [auth?.token, i18n, changeLanguage, memoizedNavigate, memoizedLogout, t]
@@ -208,7 +213,7 @@ export default Header;
 //   const fetchProfile = useCallback(
 //     debounce(async () => {
 //       try {
-//         const res = await axios.get('/api/auth/profile', {
+//         const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/profile`, {
 //           headers: { Authorization: `Bearer ${auth.token}` },
 //         });
 //         setTheme(res.data.theme_preference || 'light');
@@ -242,7 +247,7 @@ export default Header;
 //       const newTheme = theme === 'light' ? 'dark' : 'light';
 //       try {
 //         await axios.put(
-//           '/api/auth/profile',
+//           `${import.meta.env.VITE_API_URL}/api/auth/profile`,
 //           { theme_preference: newTheme },
 //           { headers: { Authorization: `Bearer ${auth.token}` } }
 //         );
@@ -268,7 +273,7 @@ export default Header;
 //       }
 //       try {
 //         await axios.put(
-//           '/api/auth/profile',
+//           `${import.meta.env.VITE_API_URL}/api/auth/profile`,
 //           { language_preference: lang },
 //           { headers: { Authorization: `Bearer ${auth.token}` } }
 //         );
@@ -294,56 +299,54 @@ export default Header;
 
 //   return (
 //     <header className="bg-gray-900 text-white shadow-md">
-//   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-//     <div className="flex justify-between items-center h-16">
-//       <h1 className="text-2xl font-semibold tracking-wide">{t('app.title')}</h1>
+//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+//         <div className="flex justify-between items-center h-16">
+//           <h1 className="text-2xl font-semibold tracking-wide">{t('app.title')}</h1>
 
-//       {error && <p className="text-red-400 text-sm absolute top-4 right-4">{error}</p>}
+//           {error && <p className="text-red-400 text-sm absolute top-4 right-4">{error}</p>}
 
-//       <nav className="flex items-center space-x-4">
-//         <Link to="/" className="hover:text-gray-300 transition">{t('header.home')}</Link>
+//           <nav className="flex items-center space-x-4">
+//             <Link to="/" className="hover:text-gray-300 transition">{t('header.home')}</Link>
 
-//         {auth?.token ? (
-//           <>
-//             <Link to="/personal" className="hover:text-gray-300 transition">{t('header.personal')}</Link>
-//             <button
-//               onClick={handleLogout}
-//               className="hover:text-red-400 transition"
+//             {auth?.token ? (
+//               <>
+//                 <Link to="/personal" className="hover:text-gray-300 transition">{t('header.personal')}</Link>
+//                 <button
+//                   onClick={handleLogout}
+//                   className="hover:text-red-400 transition"
+//                 >
+//                   {t('header.logout')}
+//                 </button>
+//               </>
+//             ) : (
+//               <>
+//                 <Link to="/login" className="hover:text-blue-300 transition">{t('header.login')}</Link>
+//                 <Link to="/register" className="hover:text-blue-300 transition">{t('header.register')}</Link>
+//               </>
+//             )}
+
+//             <select
+//               value={language}
+//               onChange={(e) => handleLanguageChange(e.target.value)}
+//               className="bg-gray-800 text-white px-2 py-1 rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
 //             >
-//               {t('header.logout')}
-//             </button>
-//           </>
-//         ) : (
-//           <>
-//             <Link to="/login" className="hover:text-blue-300 transition">{t('header.login')}</Link>
-//             <Link to="/register" className="hover:text-blue-300 transition">{t('header.register')}</Link>
-//           </>
-//         )}
+//               <option value="en">{t('header.english')}</option>
+//               <option value="es">{t('header.spanish')}</option>
+//             </select>
 
-//         <select
-//           value={language}
-//           onChange={(e) => handleLanguageChange(e.target.value)}
-//           className="bg-gray-800 text-white px-2 py-1 rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-//         >
-//           <option value="en">{t('header.english')}</option>
-//           <option value="es">{t('header.spanish')}</option>
-//         </select>
-
-//         {/* Uncomment this for theme toggle if needed */}
-//         {/* 
-//         <button
-//           onClick={toggleTheme}
-//           className="ml-2 bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600 transition"
-//         >
-//           {theme === 'dark' ? t('header.light') : t('header.dark')}
-//         </button> 
-//         */}
-//       </nav>
-//     </div>
-//   </div>
-// </header>
-
-
+//             {/* Uncomment this for theme toggle if needed */}
+//             {/* 
+//             <button
+//               onClick={toggleTheme}
+//               className="ml-2 bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600 transition"
+//             >
+//               {theme === 'dark' ? t('header.light') : t('header.dark')}
+//             </button> 
+//             */}
+//           </nav>
+//         </div>
+//       </div>
+//     </header>
 //   );
 // }
 
