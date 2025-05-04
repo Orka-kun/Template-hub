@@ -128,7 +128,7 @@ function Header({ changeLanguage }) {
     <header className="bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          <h1 className="text-3xl font-bold tracking-wide text-teal-300">{t('app.title')}</h1>
+          <h1 className="text-3xl font-bold tracking-wide text-teal-300">{t('app.title')}✓</h1>
 
           {error && <p className="text-red-300 text-sm absolute top-6 right-6 bg-red-900/50 p-2 rounded">{error}</p>}
 
