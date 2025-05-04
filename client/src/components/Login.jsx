@@ -89,9 +89,9 @@ export default function Login() {
           </button>
         </form>
         <p className="mt-6 text-center text-gray-600 dark:text-gray-400 text-sm">
-          Don’t have an account?{' '}
+          {t('login.noAccount')}{' '}
           <Link to="/register" className="text-teal-600 dark:text-teal-400 hover:underline font-medium">
-            Register
+            {t('login.register')}
           </Link>
         </p>
       </div>
