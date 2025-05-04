@@ -59,7 +59,7 @@ export default function Login() {
         )}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Email</label>
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">{t('login.email')}</label>
             <input
               type="email"
               value={email}
@@ -69,7 +69,7 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Password</label>
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">{t('login.password')}</label>
             <input
               type="password"
               value={password}
