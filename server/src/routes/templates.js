@@ -357,28 +357,25 @@ router.put('/:id', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'Invalid template ID' });
   }
 
-  if (!req.user) {
-    console.log('User not authenticated for PUT /api/templates');
-    return res.status(401).json({ error: 'Authentication required' });
-  }
+  // Input validation
   if (!title || typeof title !== 'string' || title.trim().length === 0) {
-    console.log('Invalid title:', title);
+    console.log('Title is required but missing');
     return res.status(400).json({ error: 'Title is required and must be a non-empty string' });
   }
   if (description && typeof description !== 'string') {
     console.log('Invalid description:', description);
     return res.status(400).json({ error: 'Description must be a string' });
   }
-  if (topic && !validTopics.includes(topic)) {
-    console.log('Invalid topic:', topic);
-    return res.status(400).json({ error: `Invalid topic. Must be one of: ${validTopics.join(', ')}` });
+  if (!topic || !validTopics.includes(topic)) {
+    console.log('Invalid or missing topic:', topic);
+    return res.status(400).json({ error: `Topic is required and must be one of: ${validTopics.join(', ')}` });
   }
   if (image_url && typeof image_url !== 'string') {
     console.log('Invalid image_url:', image_url);
     return res.status(400).json({ error: 'Image URL must be a string' });
   }
   if (typeof is_public !== 'boolean') {
-    console.log('Invalid is_public:', is_public);
+    console.log('Invalid or missing is_public:', is_public);
     return res.status(400).json({ error: 'is_public must be a boolean' });
   }
   if (tags && (!Array.isArray(tags) || tags.some((tag) => typeof tag !== 'string'))) {
@@ -391,15 +388,9 @@ router.put('/:id', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received PUT /api/templates/${id} request with body:`, req.body);
-
-    // Fetch the existing template
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
-      include: {
-        access: true,
-        tags: true,
-      },
+      include: { creator: true, access: true },
     });
 
     if (!template) {
@@ -407,121 +398,57 @@ router.put('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Template not found' });
     }
 
-    // Check if the user has permission to update
     if (template.created_by !== req.user.id && !req.user.is_admin) {
-      console.log(`User ${req.user.id} does not have permission to update template ${id}`);
-      return res.status(403).json({ error: 'You do not have permission to update this template' });
+      console.log(`User ${req.user.id} is not authorized to update template ID ${id}`);
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Handle tags: Disconnect existing tags and connect or create new ones
-    const tagOperations = [];
-    if (Array.isArray(tags)) {
-      console.log('Processing tags:', tags);
-      // Disconnect all existing tags
-      await prisma.template.update({
-        where: { id: parseInt(id) },
-        data: {
-          tags: {
-            set: [], // Disconnect all existing tags
-          },
-        },
-      });
-
-      // Connect or create new tags
-      for (const tagName of tags) {
-        if (tagName && typeof tagName === 'string') {
-          tagOperations.push(
-            prisma.tag.upsert({
-              where: { name: tagName },
-              update: {},
-              create: { name: tagName },
-            })
-          );
-        }
-      }
-
-      const newTags = await Promise.all(tagOperations);
-      await prisma.template.update({
-        where: { id: parseInt(id) },
-        data: {
-          tags: {
-            connect: newTags.map((tag) => ({ id: tag.id })),
-          },
-        },
-      });
-    }
-
-    // Handle access: Disconnect existing access and connect new ones
-    if (Array.isArray(access)) {
-      console.log('Processing access:', access);
-      // Disconnect all existing access
-      await prisma.template.update({
-        where: { id: parseInt(id) },
-        data: {
-          access: {
-            deleteMany: {}, // Remove all existing access
-          },
-        },
-      });
-
-      // Add new access entries
-      const accessOperations = access
-        .filter((userId) => typeof userId === 'number')
-        .map((userId) =>
-          prisma.templateAccess.create({
-            data: {
-              template_id: parseInt(id),
-              user_id: userId,
-            },
-          })
-        );
-      await Promise.all(accessOperations);
-    }
-
-    // Update the template
     const updatedTemplate = await prisma.template.update({
       where: { id: parseInt(id) },
       data: {
         title: title.trim(),
         description: description || '',
-        topic: topic || template.topic,
-        image_url: image_url || template.image_url,
-        is_public: !!is_public,
+        topic: topic,
+        image_url: image_url || null,
+        is_public: is_public,
+        updatedAt: new Date(),
+        tags: tags
+          ? {
+              deleteMany: {},
+              connectOrCreate: tags.map((tag) => ({
+                where: { name: tag },
+                create: { name: tag },
+              })),
+            }
+          : undefined,
+        access: access
+          ? {
+              deleteMany: {},
+              create: access.map((user_id) => ({ user_id })),
+            }
+          : undefined,
       },
       include: {
-        creator: { select: { name: true } },
         questions: true,
         tags: { include: { tag: true } },
-        access: {
-          include: { user: true },
-        },
-        forms: {
-          include: {
-            user: true,
-            answers: {
-              include: { question: true },
-            },
-          },
-        },
-        comments: {
-          include: { user: true },
-        },
+        access: { include: { user: { select: { email: true, name: true } } } },
+        creator: { select: { name: true } },
       },
     });
 
-    console.log(`Template ${id} updated successfully`);
+    console.log(`Template ID ${id} updated successfully by user ${req.user.id}`);
     res.json({
       ...updatedTemplate,
-      user: updatedTemplate.creator || { name: 'Unknown User' },
+      user: updatedTemplate.creator,
       tags: updatedTemplate.tags.map((tt) => tt.tag),
       description: updatedTemplate.description || '', // Return plain text
       createdAt: updatedTemplate.createdAt,
     });
   } catch (error) {
-    console.error(`Error updating template ${id}:`, error.message);
+    console.error(`Update template error for ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
     if (error.code === 'P2003') {
-      return res.status(400).json({ error: 'Invalid user ID in access list' });
+      return res.status(400).json({ error: 'Invalid user ID or tag reference' });
     }
     res.status(500).json({ error: 'Failed to update template', details: error.message });
   }
@@ -536,9 +463,9 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received DELETE /api/templates/${id} request`);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
+      include: { creator: true },
     });
 
     if (!template) {
@@ -547,23 +474,25 @@ router.delete('/:id', authenticate, async (req, res) => {
     }
 
     if (template.created_by !== req.user.id && !req.user.is_admin) {
-      console.log(`User ${req.user.id} does not have permission to delete template ${id}`);
+      console.log(`User ${req.user.id} is not authorized to delete template ID ${id}`);
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Delete related TemplateTag entries
-    await prisma.templateTag.deleteMany({ where: { template_id: parseInt(id) } });
+    await prisma.$transaction([
+      prisma.comment.deleteMany({ where: { template_id: parseInt(id) } }),
+      prisma.form.deleteMany({ where: { template_id: parseInt(id) } }),
+      prisma.question.deleteMany({ where: { template_id: parseInt(id) } }),
+      prisma.template.delete({ where: { id: parseInt(id) } }),
+    ]);
 
-    // Delete the template
-    await prisma.template.delete({
-      where: { id: parseInt(id) },
-    });
-
-    console.log(`Template ${id} deleted successfully`);
-    res.json({ message: 'Template deleted successfully' });
+    console.log(`Template ID ${id} deleted successfully by user ${req.user.id}`);
+    res.status(204).send();
   } catch (error) {
-    console.error('Delete template error:', error.message);
+    console.error(`Delete template error for ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Template not found' });
+    }
     res.status(500).json({ error: 'Failed to delete template', details: error.message });
   }
 });
@@ -577,23 +506,21 @@ router.post('/:id/questions', authenticate, async (req, res) => {
     console.log('Invalid template ID:', id);
     return res.status(400).json({ error: 'Invalid template ID' });
   }
-
-  // Input validation
   if (!type || !validQuestionTypes.includes(type)) {
     console.log('Invalid question type:', type);
-    return res.status(400).json({ error: `Invalid question type. Must be one of: ${validQuestionTypes.join(', ')}` });
+    return res.status(400).json({ error: `Type must be one of: ${validQuestionTypes.join(', ')}` });
   }
   if (!title || typeof title !== 'string' || title.trim().length === 0) {
-    console.log('Invalid question title:', title);
-    return res.status(400).json({ error: 'Question title is required and must be a non-empty string' });
+    console.log('Title is required but missing');
+    return res.status(400).json({ error: 'Title is required and must be a non-empty string' });
   }
   if (description && typeof description !== 'string') {
     console.log('Invalid description:', description);
     return res.status(400).json({ error: 'Description must be a string' });
   }
-  if (typeof order !== 'number') {
+  if (typeof order !== 'number' || order < 0) {
     console.log('Invalid order:', order);
-    return res.status(400).json({ error: 'Order must be a number' });
+    return res.status(400).json({ error: 'Order must be a non-negative number' });
   }
   if (typeof is_shown_in_table !== 'boolean') {
     console.log('Invalid is_shown_in_table:', is_shown_in_table);
@@ -601,10 +528,9 @@ router.post('/:id/questions', authenticate, async (req, res) => {
   }
 
   try {
-    console.log(`Received POST /api/templates/${id}/questions request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
-      include: { questions: true },
+      include: { creator: true },
     });
 
     if (!template) {
@@ -613,53 +539,46 @@ router.post('/:id/questions', authenticate, async (req, res) => {
     }
 
     if (template.created_by !== req.user.id && !req.user.is_admin) {
-      console.log(`User ${req.user.id} does not have permission to add questions to template ${id}`);
+      console.log(`User ${req.user.id} is not authorized to add question to template ID ${id}`);
       return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    const questionCounts = template.questions.reduce((acc, q) => {
-      if (!q.fixed) acc[q.type] = (acc[q.type] || 0) + 1;
-      return acc;
-    }, {});
-
-    if (questionCounts[type] >= 4) {
-      console.log(`Maximum 4 ${type} questions reached for template ${id}`);
-      return res.status(400).json({ error: `Maximum 4 ${type} questions allowed` });
     }
 
     const question = await prisma.question.create({
       data: {
-        template_id: parseInt(id),
         type,
         title: title.trim(),
         description: description || '',
-        is_shown_in_table,
         order,
+        is_shown_in_table,
+        template_id: parseInt(id),
+        fixed: false,
       },
     });
 
-    console.log(`Question created successfully for template ${id}`);
-    res.json(question);
+    console.log(`Question added successfully to template ID ${id} by user ${req.user.id}`);
+    res.status(201).json(question);
   } catch (error) {
-    console.error('Create question error:', error.message);
+    console.error(`Add question error for template ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
-    res.status(500).json({ error: 'Failed to create question', details: error.message });
+    if (error.code === 'P2003') {
+      return res.status(400).json({ error: 'Invalid template ID' });
+    }
+    res.status(500).json({ error: 'Failed to add question', details: error.message });
   }
 });
 
 // DELETE /templates/:id/questions/:questionId - Delete a question
 router.delete('/:id/questions/:questionId', authenticate, async (req, res) => {
   const { id, questionId } = req.params;
-
   if (!/^\d+$/.test(id) || !/^\d+$/.test(questionId)) {
-    console.log('Invalid template or question ID:', { id, questionId });
-    return res.status(400).json({ error: 'Invalid template or question ID' });
+    console.log('Invalid template ID or question ID:', { id, questionId });
+    return res.status(400).json({ error: 'Invalid template ID or question ID' });
   }
 
   try {
-    console.log(`Received DELETE /api/templates/${id}/questions/${questionId} request`);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
+      include: { creator: true, questions: true },
     });
 
     if (!template) {
@@ -667,65 +586,61 @@ router.delete('/:id/questions/:questionId', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Template not found' });
     }
 
-    if (template.created_by !== req.user.id && !req.user.is_admin) {
-      console.log(`User ${req.user.id} does not have permission to delete questions from template ${id}`);
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    const question = await prisma.question.findUnique({
-      where: { id: parseInt(questionId) },
-    });
-
+    const question = template.questions.find(q => q.id === parseInt(questionId));
     if (!question) {
-      console.log(`Question ID ${questionId} not found`);
+      console.log(`Question ID ${questionId} not found in template ID ${id}`);
       return res.status(404).json({ error: 'Question not found' });
     }
 
+    if (template.created_by !== req.user.id && !req.user.is_admin) {
+      console.log(`User ${req.user.id} is not authorized to delete question ID ${questionId} in template ID ${id}`);
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Prevent deletion of fixed questions
     if (question.fixed) {
-      console.log(`Cannot delete fixed question ID ${questionId}`);
+      console.log(`Cannot delete fixed question ID ${questionId} in template ID ${id}`);
       return res.status(400).json({ error: 'Cannot delete fixed question' });
     }
 
     await prisma.question.delete({
-      where: { id: parseInt(questionId), template_id: parseInt(id) },
+      where: { id: parseInt(questionId) },
     });
 
-    console.log(`Question ${questionId} deleted successfully from template ${id}`);
-    res.json({ message: 'Question deleted successfully' });
+    console.log(`Question ID ${questionId} deleted successfully from template ID ${id} by user ${req.user.id}`);
+    res.status(204).send();
   } catch (error) {
-    console.error('Delete question error:', error.message);
+    console.error(`Delete question error for question ID ${questionId} in template ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Question not found' });
+    }
     res.status(500).json({ error: 'Failed to delete question', details: error.message });
   }
 });
 
-// PUT /templates/:id/questions/order - Update question order
-router.put('/:id/questions/order', authenticate, async (req, res) => {
-  const { id } = req.params;
-  const { order } = req.body;
+// PUT /templates/:id/questions/:questionId - Update a question
+router.put('/:id/questions/:questionId', authenticate, async (req, res) => {
+  const { id, questionId } = req.params;
+  const { title, type } = req.body;
 
-  if (!/^\d+$/.test(id)) {
-    console.log('Invalid template ID:', id);
-    return res.status(400).json({ error: 'Invalid template ID' });
+  if (!/^\d+$/.test(id) || !/^\d+$/.test(questionId)) {
+    console.log('Invalid template ID or question ID:', { id, questionId });
+    return res.status(400).json({ error: 'Invalid template ID or question ID' });
   }
-
-  // Input validation
-  if (!Array.isArray(order) || order.length === 0) {
-    console.log('Invalid order array:', order);
-    return res.status(400).json({ error: 'Order must be a non-empty array' });
+  if (!title || typeof title !== 'string' || title.trim().length === 0) {
+    console.log('Title is required but missing');
+    return res.status(400).json({ error: 'Title is required and must be a non-empty string' });
   }
-  for (const item of order) {
-    if (!item.id || typeof item.order !== 'number') {
-      console.log('Invalid order item:', item);
-      return res.status(400).json({ error: 'Each order item must have an id and order number' });
-    }
+  if (!type || !validQuestionTypes.includes(type)) {
+    console.log('Invalid question type:', type);
+    return res.status(400).json({ error: `Type must be one of: ${validQuestionTypes.join(', ')}` });
   }
 
   try {
-    console.log(`Received PUT /api/templates/${id}/questions/order request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
-      include: { questions: true },
+      include: { creator: true, questions: true },
     });
 
     if (!template) {
@@ -733,39 +648,45 @@ router.put('/:id/questions/order', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Template not found' });
     }
 
+    const question = template.questions.find(q => q.id === parseInt(questionId));
+    if (!question) {
+      console.log(`Question ID ${questionId} not found in template ID ${id}`);
+      return res.status(404).json({ error: 'Question not found' });
+    }
+
     if (template.created_by !== req.user.id && !req.user.is_admin) {
-      console.log(`User ${req.user.id} does not have permission to update question order for template ${id}`);
+      console.log(`User ${req.user.id} is not authorized to update question ID ${questionId} in template ID ${id}`);
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Verify all question IDs exist and belong to the template
-    const questionIds = template.questions.map((q) => q.id);
-    const invalidIds = order.filter((item) => !questionIds.includes(item.id));
-    if (invalidIds.length > 0) {
-      console.log('Invalid question IDs in order:', invalidIds);
-      return res.status(400).json({ error: 'One or more question IDs are invalid' });
+    // Prevent updating fixed questions
+    if (question.fixed) {
+      console.log(`Cannot update fixed question ID ${questionId} in template ID ${id}`);
+      return res.status(400).json({ error: 'Cannot update fixed question' });
     }
 
-    // Update the order
-    await prisma.$transaction(
-      order.map((item) => {
-        return prisma.question.update({
-          where: { id: item.id, template_id: parseInt(id) },
-          data: { order: item.order },
-        });
-      })
-    );
+    const updatedQuestion = await prisma.question.update({
+      where: { id: parseInt(questionId) },
+      data: {
+        title: title.trim(),
+        type,
+        updatedAt: new Date(),
+      },
+    });
 
-    console.log(`Question order updated successfully for template ${id}`);
-    res.json({ message: 'Order updated successfully' });
+    console.log(`Question ID ${questionId} updated successfully in template ID ${id} by user ${req.user.id}`);
+    res.json(updatedQuestion);
   } catch (error) {
-    console.error('Update question order error:', error.message);
+    console.error(`Update question error for question ID ${questionId} in template ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
-    res.status(500).json({ error: 'Failed to update question order', details: error.message });
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Question not found' });
+    }
+    res.status(500).json({ error: 'Failed to update question', details: error.message });
   }
 });
 
-// POST /templates/:id/form - Submit a form
+// POST /templates/:id/form - Submit answers for a template
 router.post('/:id/form', authenticate, async (req, res) => {
   const { id } = req.params;
   const { answers } = req.body;
@@ -774,24 +695,15 @@ router.post('/:id/form', authenticate, async (req, res) => {
     console.log('Invalid template ID:', id);
     return res.status(400).json({ error: 'Invalid template ID' });
   }
-
-  // Input validation
-  if (!Array.isArray(answers) || answers.length === 0) {
-    console.log('Invalid answers array:', answers);
-    return res.status(400).json({ error: 'Answers must be a non-empty array' });
-  }
-  for (const answer of answers) {
-    if (!answer.question_id || typeof answer.question_id !== 'number' || answer.value === undefined) {
-      console.log('Invalid answer:', answer);
-      return res.status(400).json({ error: 'Each answer must have a question_id (number) and value' });
-    }
+  if (!Array.isArray(answers) || answers.some((a) => !a.question_id || typeof a.value !== 'string')) {
+    console.log('Invalid answers format:', answers);
+    return res.status(400).json({ error: 'Answers must be an array of objects with question_id and value' });
   }
 
   try {
-    console.log(`Received POST /api/templates/${id}/form request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
-      include: { questions: true, access: true },
+      include: { questions: true, creator: true, access: true },
     });
 
     if (!template) {
@@ -799,53 +711,40 @@ router.post('/:id/form', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Template not found' });
     }
 
-    if (template.created_by === req.user.id) {
-      console.log(`User ${req.user.id} is the creator of template ${id} and cannot fill their own template`);
-      return res.status(403).json({ error: 'Creators cannot fill their own templates' });
-    }
+    const hasAccess =
+      template.is_public ||
+      template.created_by === req.user.id ||
+      template.access.some((a) => a.user_id === req.user.id) ||
+      req.user.is_admin;
 
-    if (
-      !template.is_public &&
-      !template.access.some((a) => a.user_id === req.user.id) &&
-      !req.user.is_admin
-    ) {
-      console.log(`User ${req.user.id} does not have access to fill template ${id}`);
+    if (!hasAccess) {
+      console.log(`User ${req.user.id} does not have access to submit form for template ID ${id}`);
       return res.status(403).json({ error: 'Forbidden' });
     }
 
     const form = await prisma.form.create({
       data: {
-        template_id: parseInt(id),
         user_id: req.user.id,
+        template_id: parseInt(id),
         createdAt: new Date(),
         answers: {
-          create: answers.map((answer) => ({
-            question_id: answer.question_id,
-            value: answer.value.toString(),
-          })), // Removed fixed_user and fixed_date answers
+          create: answers.map((a) => ({
+            question_id: parseInt(a.question_id),
+            value: a.value,
+          })),
         },
       },
-      include: {
-        answers: { include: { question: true } },
-        user: { select: { name: true } },
-        template: { select: { title: true, created_by: true } },
-      },
+      include: { answers: { include: { question: true } } },
     });
 
-    if (form.template.created_by !== req.user.id) {
-      await prisma.notification.create({
-        data: {
-          user_id: form.template.created_by,
-          message: `${form.user.name} submitted a form for your template "${form.template.title}" (ID: ${form.id})`,
-        },
-      });
-    }
-
-    console.log(`Form created successfully for template ${id} by user ${req.user.id}`);
-    res.json(form);
+    console.log(`Form submitted successfully for template ID ${id} by user ${req.user.id}`);
+    res.status(201).json(form);
   } catch (error) {
-    console.error('Create form error:', error.message);
+    console.error(`Submit form error for template ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
+    if (error.code === 'P2003') {
+      return res.status(400).json({ error: 'Invalid question ID in answers' });
+    }
     res.status(500).json({ error: 'Failed to submit form', details: error.message });
   }
 });
@@ -1000,26 +899,15 @@ router.post('/:id/comments', authenticate, async (req, res) => {
     console.log('Invalid template ID:', id);
     return res.status(400).json({ error: 'Invalid template ID' });
   }
-
-  // Input validation
-  if (!req.user) {
-    console.log('User not authenticated for POST /api/comments');
-    return res.status(401).json({ error: 'Authentication required' });
-  }
   if (!content || typeof content !== 'string' || content.trim().length === 0) {
-    console.log('Invalid comment content:', content);
-    return res.status(400).json({ error: 'Comment content is required and must be a non-empty string' });
+    console.log('Content is required but missing');
+    return res.status(400).json({ error: 'Content is required and must be a non-empty string' });
   }
 
   try {
-    console.log(`Received POST /api/templates/${id}/comments request`);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
-      include: {
-        access: {
-          select: { user_id: true },
-        },
-      },
+      include: { creator: true, access: true },
     });
 
     if (!template) {
@@ -1027,51 +915,37 @@ router.post('/:id/comments', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'Template not found' });
     }
 
-    // Check if the user is the creator
-    if (template.created_by === req.user.id) {
-      console.log(`User ${req.user.id} is the creator of template ${id} and cannot comment on their own template`);
-      return res.status(403).json({ error: 'Creators cannot comment on their own templates' });
-    }
-
-    // Check access
     const hasAccess =
       template.is_public ||
       template.created_by === req.user.id ||
       template.access.some((a) => a.user_id === req.user.id) ||
       req.user.is_admin;
 
-    console.log(`Access check for user ${req.user.id} to comment on template ${id}:`, {
-      created_by: template.created_by,
-      is_public: template.is_public,
-      access: template.access,
-      is_admin: req.user.is_admin,
-      hasAccess,
-    });
-
     if (!hasAccess) {
-      console.log(`User ${req.user.id} does not have access to comment on template ${id}`);
-      return res.status(403).json({ error: 'You do not have access to this template' });
+      console.log(`User ${req.user.id} does not have access to comment on template ID ${id}`);
+      return res.status(403).json({ error: 'Forbidden' });
     }
 
-    // Create the comment
+    // Prevent creator from adding comments
+    if (template.created_by === req.user.id) {
+      console.log(`Creator ${req.user.id} cannot add comments to template ID ${id}`);
+      return res.status(403).json({ error: 'Creator cannot add comments' });
+    }
+
     const comment = await prisma.comment.create({
       data: {
         content: content.trim(),
-        template_id: parseInt(id),
         user_id: req.user.id,
+        template_id: parseInt(id),
         createdAt: new Date(),
       },
-      include: {
-        user: {
-          select: { id: true, name: true },
-        },
-      },
+      include: { user: { select: { name: true } } },
     });
 
-    console.log(`Comment added successfully for template ${id} by user ${req.user.id}`);
+    console.log(`Comment added successfully to template ID ${id} by user ${req.user.id}`);
     res.status(201).json(comment);
   } catch (error) {
-    console.error(`Error adding comment to template ${id}:`, error.message);
+    console.error(`Add comment error for template ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
     res.status(500).json({ error: 'Failed to add comment', details: error.message });
   }
@@ -1315,18 +1189,15 @@ router.post('/:id/share', authenticate, async (req, res) => {
     console.log('Invalid template ID:', id);
     return res.status(400).json({ error: 'Invalid template ID' });
   }
-
-  // Input validation
   if (!email || !isValidEmail(email)) {
     console.log('Invalid email:', email);
-    return res.status(400).json({ error: 'A valid email is required' });
+    return res.status(400).json({ error: 'Valid email is required' });
   }
 
   try {
-    console.log(`Received POST /api/templates/${id}/share request with body:`, req.body);
     const template = await prisma.template.findUnique({
       where: { id: parseInt(id) },
-      include: { creator: { select: { name: true } } },
+      include: { creator: true },
     });
 
     if (!template) {
@@ -1335,36 +1206,97 @@ router.post('/:id/share', authenticate, async (req, res) => {
     }
 
     if (template.created_by !== req.user.id && !req.user.is_admin) {
-      console.log(`User ${req.user.id} does not have permission to share template ${id}`);
+      console.log(`User ${req.user.id} is not authorized to share template ID ${id}`);
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
 
     if (!user) {
       console.log(`User with email ${email} not found`);
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const access = await prisma.templateAccess.upsert({
-      where: { template_id_user_id: { template_id: parseInt(id), user_id: user.id } },
-      update: {},
-      create: { template_id: parseInt(id), user_id: user.id },
-    });
-
-    await prisma.notification.create({
-      data: {
-        user_id: user.id,
-        message: `${template.creator.name} shared the template "${template.title}" with you`,
+    const existingAccess = await prisma.templateAccess.findUnique({
+      where: {
+        template_id_user_id: {
+          template_id: parseInt(id),
+          user_id: user.id,
+        },
       },
     });
 
-    console.log(`Template ${id} shared successfully with user ${user.id}`);
-    res.json({ message: 'Template shared successfully', access });
+    if (existingAccess) {
+      console.log(`User ${email} already has access to template ID ${id}`);
+      return res.status(400).json({ error: 'User already has access' });
+    }
+
+    await prisma.templateAccess.create({
+      data: {
+        template_id: parseInt(id),
+        user_id: user.id,
+      },
+    });
+
+    console.log(`Template ID ${id} shared successfully with user ${email} by user ${req.user.id}`);
+    res.status(201).json({ message: 'Template shared successfully' });
   } catch (error) {
-    console.error('Share template error:', error.message);
+    console.error(`Share template error for template ID ${id}:`, error.message);
     console.error('Stack trace:', error.stack);
     res.status(500).json({ error: 'Failed to share template', details: error.message });
+  }
+});
+
+// PUT /templates/:id/questions/order - Update question order
+router.put('/:id/questions/order', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const { orders } = req.body;
+
+  if (!/^\d+$/.test(id)) {
+    console.log('Invalid template ID:', id);
+    return res.status(400).json({ error: 'Invalid template ID' });
+  }
+  if (!Array.isArray(orders) || orders.some((o) => !o.id || typeof o.order !== 'number' || o.order < 0)) {
+    console.log('Invalid orders format:', orders);
+    return res.status(400).json({ error: 'Orders must be an array of objects with id and order' });
+  }
+
+  try {
+    const template = await prisma.template.findUnique({
+      where: { id: parseInt(id) },
+      include: { creator: true, questions: true },
+    });
+
+    if (!template) {
+      console.log(`Template ID ${id} not found`);
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    if (template.created_by !== req.user.id && !req.user.is_admin) {
+      console.log(`User ${req.user.id} is not authorized to update order for template ID ${id}`);
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    await prisma.$transaction(
+      orders.map((o) =>
+        prisma.question.update({
+          where: { id: o.id },
+          data: { order: o.order },
+        })
+      )
+    );
+
+    console.log(`Question order updated successfully for template ID ${id} by user ${req.user.id}`);
+    res.json({ message: 'Question order updated successfully' });
+  } catch (error) {
+    console.error(`Update question order error for template ID ${id}:`, error.message);
+    console.error('Stack trace:', error.stack);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'One or more questions not found' });
+    }
+    res.status(500).json({ error: 'Failed to update question order', details: error.message });
   }
 });
 
@@ -1372,7 +1304,6 @@ module.exports = router;
 // const express = require('express');
 // const { PrismaClient } = require('@prisma/client');
 // const authenticate = require('../middleware/authenticate');
-// const { marked } = require('marked');
 // const jwt = require('jsonwebtoken');
 
 // const router = express.Router();
@@ -1431,15 +1362,13 @@ module.exports = router;
 //       },
 //     });
 
-//     const processedTemplates = await Promise.all(
-//       templates.map(async (t) => ({
-//         ...t,
-//         user: t.creator || { name: 'Unknown User' }, // Fallback for creator
-//         tags: t.tags.map((tt) => tt.tag),
-//         description: await marked.parse(t.description || ''),
-//         createdAt: t.createdAt,
-//       }))
-//     );
+//     const processedTemplates = templates.map((t) => ({
+//       ...t,
+//       user: t.creator || { name: 'Unknown User' }, // Fallback for creator
+//       tags: t.tags.map((tt) => tt.tag),
+//       description: t.description || '', // Return plain text
+//       createdAt: t.createdAt,
+//     }));
 
 //     console.log('Templates fetched successfully:', processedTemplates.length);
 //     res.json(processedTemplates);
@@ -1477,15 +1406,13 @@ module.exports = router;
 //       return res.status(404).json({ error: 'No shared templates found' });
 //     }
 
-//     const processedTemplates = await Promise.all(
-//       templates.map(async (t) => ({
-//         ...t,
-//         user: t.creator || { name: 'Unknown User' },
-//         tags: t.tags.map((tt) => tt.tag),
-//         description: await marked.parse(t.description || ''),
-//         createdAt: t.createdAt,
-//       }))
-//     );
+//     const processedTemplates = templates.map((t) => ({
+//       ...t,
+//       user: t.creator || { name: 'Unknown User' },
+//       tags: t.tags.map((tt) => tt.tag),
+//       description: t.description || '', // Return plain text
+//       createdAt: t.createdAt,
+//     }));
 
 //     console.log(`Shared templates fetched successfully for user_id: ${userId}:`, processedTemplates.length);
 //     res.json(processedTemplates);
@@ -1592,7 +1519,7 @@ module.exports = router;
 //       ...template,
 //       user: creator,
 //       tags: (template.tags || []).map((tt) => tt.tag),
-//       description: await marked.parse(template.description || ''),
+//       description: template.description || '', // Return plain text
 //       aggregation,
 //       createdAt: template.createdAt,
 //     };
@@ -1681,27 +1608,7 @@ module.exports = router;
 //         created_by: req.user.id,
 //         createdAt: new Date(),
 //         questions: {
-//           create: [
-//             ...questions,
-//             {
-//               type: 'fixed_user',
-//               title: 'User',
-//               description: 'Submitting user',
-//               fixed: true,
-//               order: -2,
-//               is_shown_in_table: true,
-//               required: true,
-//             },
-//             {
-//               type: 'fixed_date',
-//               title: 'Date',
-//               description: 'Submission date',
-//               fixed: true,
-//               order: -1,
-//               is_shown_in_table: true,
-//               required: true,
-//             },
-//           ],
+//           create: questions, // Removed fixed_user and fixed_date questions
 //         },
 //         tags: tags
 //           ? {
@@ -1730,7 +1637,7 @@ module.exports = router;
 //       ...template,
 //       user: template.creator,
 //       tags: template.tags.map((tt) => tt.tag),
-//       description: await marked.parse(template.description || ''),
+//       description: template.description || '', // Return plain text
 //       createdAt: template.createdAt,
 //     });
 //   } catch (error) {
@@ -1910,7 +1817,7 @@ module.exports = router;
 //       ...updatedTemplate,
 //       user: updatedTemplate.creator || { name: 'Unknown User' },
 //       tags: updatedTemplate.tags.map((tt) => tt.tag),
-//       description: await marked.parse(updatedTemplate.description || ''), // Fixed: Correctly apply marked.parse
+//       description: updatedTemplate.description || '', // Return plain text
 //       createdAt: updatedTemplate.createdAt,
 //     });
 //   } catch (error) {
@@ -2215,20 +2122,10 @@ module.exports = router;
 //         user_id: req.user.id,
 //         createdAt: new Date(),
 //         answers: {
-//           create: [
-//             ...answers.map((answer) => ({
-//               question_id: answer.question_id,
-//               value: answer.value.toString(),
-//             })),
-//             {
-//               question_id: template.questions.find((q) => q.type === 'fixed_user').id,
-//               value: req.user.email,
-//             },
-//             {
-//               question_id: template.questions.find((q) => q.type === 'fixed_date').id,
-//               value: new Date().toISOString(),
-//             },
-//           ],
+//           create: answers.map((answer) => ({
+//             question_id: answer.question_id,
+//             value: answer.value.toString(),
+//           })), // Removed fixed_user and fixed_date answers
 //         },
 //       },
 //       include: {
@@ -2338,20 +2235,10 @@ module.exports = router;
 //       where: { id: parseInt(formId) },
 //       data: {
 //         answers: {
-//           create: [
-//             ...answers.map((answer) => ({
-//               question_id: answer.question_id,
-//               value: answer.value.toString(),
-//             })),
-//             {
-//               question_id: form.template.questions.find((q) => q.type === 'fixed_user').id,
-//               value: req.user.email,
-//             },
-//             {
-//               question_id: form.template.questions.find((q) => q.type === 'fixed_date').id,
-//               value: new Date().toISOString(),
-//             },
-//           ],
+//           create: answers.map((answer) => ({
+//             question_id: answer.question_id,
+//             value: answer.value.toString(),
+//           })), // Removed fixed_user and fixed_date answers
 //         },
 //       },
 //       include: { answers: { include: { question: true } }, user: true },
@@ -2712,7 +2599,7 @@ module.exports = router;
 //       ...duplicate,
 //       user: duplicate.creator || { name: 'Unknown User' },
 //       tags: duplicate.tags.map((tt) => tt.tag),
-//       description: await marked.parse(duplicate.description || ''),
+//       description: duplicate.description || '', // Return plain text
 //       createdAt: duplicate.createdAt,
 //     });
 //   } catch (error) {
@@ -2785,4 +2672,3 @@ module.exports = router;
 // });
 
 // module.exports = router;
-
