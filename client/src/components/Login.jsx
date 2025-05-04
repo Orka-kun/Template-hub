@@ -46,7 +46,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
       <div className="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl transform transition-all duration-500 hover:shadow-3xl">
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-gray-100">Login</h2>
+        <h2 className="text-3xl font-bold mb-6 text-center text-gray-800 dark:text-gray-100">{t('login.title')}</h2>
         {notifications.length > 0 && (
           <div className="space-y-3 mb-6">
             {notifications.map((n) => (
