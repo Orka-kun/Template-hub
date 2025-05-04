@@ -42,6 +42,10 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
     onDelete(id);
   };
 
+  // Prevent rapid clicks by adding a small debounce effect
+  const debouncedSave = useCallback(debounce(handleSaveEdit, 300), [handleSaveEdit]);
+  const debouncedDelete = useCallback(debounce(handleDelete, 300), [handleDelete]);
+
   return (
     <div
       ref={setNodeRef}
@@ -56,14 +60,14 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
             type="text"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
+            onBlur={debouncedSave}
             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
             aria-label="Edit question title"
-            onBlur={handleSaveEdit}
           />
           <select
             value={editType}
             onChange={(e) => setEditType(e.target.value)}
-            onBlur={handleSaveEdit}
+            onBlur={debouncedSave}
             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
             aria-label="Edit question type"
           >
@@ -80,7 +84,7 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
         <div className="flex space-x-2">
           <button
             ref={saveButtonRef}
-            onClick={() => (isEditing ? handleSaveEdit() : setIsEditing(true))}
+            onClick={() => (isEditing ? debouncedSave() : setIsEditing(true))}
             className="text-blue-500 hover:text-blue-700 transition-colors font-semibold"
             aria-label={isEditing ? t('template.save_edit') : t('template.edit')}
           >
@@ -88,7 +92,7 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
           </button>
           <button
             ref={deleteButtonRef}
-            onClick={handleDelete}
+            onClick={debouncedDelete}
             className="text-red-500 hover:text-red-700 transition-colors font-semibold"
             aria-label={t('template.delete')}
           >
@@ -460,7 +464,7 @@ function TemplatePage() {
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
-    if (active.id !== over.id) {
+    if (active.id !== over.id && template) {
       const oldIndex = template.questions.findIndex(q => q.id === active.id);
       const newIndex = template.questions.findIndex(q => q.id === over.id);
       const newQuestions = [...template.questions];
@@ -518,7 +522,7 @@ function TemplatePage() {
 
   const validateForm = () => {
     const errors = {};
-    template.questions.forEach(q => {
+    template?.questions.forEach(q => {
       if (q.type === 'fixed_user' || q.type === 'fixed_date') return;
       if (q.type !== 'checkbox' && !answers[q.id]) {
         errors[q.id] = t('template.answer_required', { question: q.title });
@@ -547,7 +551,7 @@ function TemplatePage() {
     setIsSubmittingForm(true);
     const formattedAnswers = Object.entries(answers)
       .filter(([question_id]) => {
-        const question = template.questions.find(q => q.id === parseInt(question_id));
+        const question = template?.questions.find(q => q.id === parseInt(question_id));
         return question && question.type !== 'fixed_user' && question.type !== 'fixed_date';
       })
       .map(([question_id, value]) => ({
@@ -654,7 +658,7 @@ function TemplatePage() {
   };
 
   const handleExportCSV = () => {
-    if (!template.forms || template.forms.length === 0) {
+    if (!template?.forms || template.forms.length === 0) {
       setNotifications((prev) => [
         ...prev,
         { id: Date.now(), message: t('template.no_submissions'), type: 'error' },
