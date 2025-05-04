@@ -22,9 +22,20 @@ const debounce = (func, delay) => {
   };
 };
 
-function SortableItem({ id, title, type, onDelete, t }) {
+function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition };
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(title);
+  const [editType, setEditType] = useState(type);
+
+  const handleSaveEdit = async () => {
+    if (editTitle.trim() && editType) {
+      await onEdit(id, editTitle, editType);
+      setIsEditing(false);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
@@ -33,14 +44,62 @@ function SortableItem({ id, title, type, onDelete, t }) {
       {...listeners}
       className="p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md mb-4 flex justify-between items-center border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow duration-300"
     >
-      <span className="text-gray-800 dark:text-gray-100 font-medium">{title} - {t(`question_types.${type}`)}</span>
-      <button
-        onClick={() => onDelete(id)}
-        className="text-red-500 hover:text-red-700 transition-colors font-semibold"
-        aria-label={t('template.delete')}
-      >
-        {t('template.delete')}
-      </button>
+      {isEditing ? (
+        <div className="flex-1 space-y-2">
+          <input
+            type="text"
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+            aria-label="Edit question title"
+          />
+          <select
+            value={editType}
+            onChange={(e) => setEditType(e.target.value)}
+            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
+            aria-label="Edit question type"
+          >
+            <option value="single_line">{t('question_types.single_line')}</option>
+            <option value="multi_line">{t('question_types.multi_line')}</option>
+            <option value="positive_integer">{t('question_types.positive_integer')}</option>
+            <option value="checkbox">{t('question_types.checkbox')}</option>
+          </select>
+          <button
+            onClick={handleSaveEdit}
+            className="bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700 transition-colors"
+            aria-label={t('template.save_edit')}
+          >
+            {t('template.save_edit')}
+          </button>
+          <button
+            onClick={() => setIsEditing(false)}
+            className="bg-gray-600 text-white px-3 py-1 rounded-full hover:bg-gray-700 transition-colors ml-2"
+            aria-label={t('template.cancel_edit')}
+          >
+            {t('template.cancel')}
+          </button>
+        </div>
+      ) : (
+        <span className="text-gray-800 dark:text-gray-100 font-medium">{title} - {t(`question_types.${type}`)}</span>
+      )}
+      {isCreator && (
+        <div className="flex space-x-2">
+          <button
+            onClick={() => (isEditing ? handleSaveEdit() : setIsEditing(true))}
+            className="text-blue-500 hover:text-blue-700 transition-colors font-semibold"
+            aria-label={isEditing ? t('template.save_edit') : t('template.edit')}
+          >
+            {isEditing ? t('template.save_edit') : t('template.edit')}
+          </button>
+          <button
+            onClick={() => onDelete(id)}
+            className="text-red-500 hover:text-red-700 transition-colors font-semibold"
+            aria-label={t('template.delete')}
+          >
+            {t('template.delete')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -338,6 +397,11 @@ function TemplatePage() {
           ...prev,
           { id: Date.now(), message: t('template.no_access'), type: 'error' },
         ]);
+      } else if (error.response?.status === 400 && error.response?.data?.error === 'Cannot delete fixed question') {
+        setNotifications((prev) => [
+          ...prev,
+          { id: Date.now(), message: t('template.cannot_delete_fixed'), type: 'error' },
+        ]);
       } else {
         setNotifications((prev) => [
           ...prev,
@@ -346,6 +410,55 @@ function TemplatePage() {
             message: `${t('template.error_deleting_question')}: ${error.response?.data?.error || t('error.unknown')}`,
             type: 'error',
           },
+        ]);
+      }
+    }
+  };
+
+  const handleEditQuestion = async (questionId, newTitle, newType) => {
+    if (!auth?.token) {
+      setNotifications((prev) => [
+        ...prev,
+        { id: Date.now(), message: t('header.login_required'), type: 'error' },
+      ]);
+      navigate('/login');
+      return;
+    }
+    try {
+      const res = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/templates/${id}/questions/${questionId}`,
+        { title: newTitle, type: newType },
+        { headers: { Authorization: `Bearer ${auth.token}` } }
+      );
+      setTemplate({
+        ...template,
+        questions: template.questions.map(q => q.id === questionId ? res.data : q),
+      });
+      setNotifications((prev) => [
+        ...prev,
+        { id: Date.now(), message: t('template.question_updated'), type: 'success' },
+      ]);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        setNotifications((prev) => [
+          ...prev,
+          { id: Date.now(), message: t('header.session_expired'), type: 'error' },
+        ]);
+        navigate('/login');
+      } else if (error.response?.status === 403) {
+        setNotifications((prev) => [
+          ...prev,
+          { id: Date.now(), message: t('template.no_access'), type: 'error' },
+        ]);
+      } else if (error.response?.status === 400) {
+        setNotifications((prev) => [
+          ...prev,
+          { id: Date.now(), message: `${t('template.error_updating_question')}: ${error.response?.data?.error || t('error.unknown')}`, type: 'error' },
+        ]);
+      } else {
+        setNotifications((prev) => [
+          ...prev,
+          { id: Date.now(), message: `${t('template.error_updating_question')}: ${error.response?.data?.error || t('error.unknown')}`, type: 'error' },
         ]);
       }
     }
@@ -895,7 +1008,9 @@ function TemplatePage() {
                     title={q.title}
                     type={q.type}
                     onDelete={handleDeleteQuestion}
+                    onEdit={handleEditQuestion}
                     t={t}
+                    isCreator={isCreator}
                   />
                 ))
               )}
@@ -1144,12 +1259,12 @@ export default TemplatePage;
 //       style={style}
 //       {...attributes}
 //       {...listeners}
-//       className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4 flex justify-between items-center"
+//       className="p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md mb-4 flex justify-between items-center border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow duration-300"
 //     >
-//       <span className="text-gray-800 dark:text-gray-100">{title} - {t(`question_types.${type}`)}</span>
+//       <span className="text-gray-800 dark:text-gray-100 font-medium">{title} - {t(`question_types.${type}`)}</span>
 //       <button
 //         onClick={() => onDelete(id)}
-//         className="text-red-500 hover:text-red-700 transition-colors"
+//         className="text-red-500 hover:text-red-700 transition-colors font-semibold"
 //         aria-label={t('template.delete')}
 //       >
 //         {t('template.delete')}
@@ -1161,12 +1276,12 @@ export default TemplatePage;
 // function Notification({ message, type, onClose }) {
 //   return (
 //     <div
-//       className={`p-4 rounded-lg shadow-md mb-4 flex justify-between items-center ${
-//         type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+//       className={`p-4 rounded-xl shadow-lg flex justify-between items-center transition-all duration-300 transform ${
+//         type === 'success' ? 'bg-green-50 text-green-800 border-l-4 border-green-500' : 'bg-red-50 text-red-800 border-l-4 border-red-500'
 //       }`}
 //     >
 //       <span>{message}</span>
-//       <button onClick={onClose} className="text-lg font-bold" aria-label="Close notification">
+//       <button onClick={onClose} className="text-lg font-bold hover:opacity-70 transition-opacity" aria-label="Close notification">
 //         ×
 //       </button>
 //     </div>
@@ -1804,27 +1919,41 @@ export default TemplatePage;
 //   };
 
 //   if (loading) {
-//     return <div className="text-center text-gray-600 dark:text-gray-400">{t('loading')}</div>;
+//     return (
+//       <div className="container mx-auto p-6 min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+//         <p className="text-lg text-gray-600 dark:text-gray-300 animate-pulse">{t('loading')}</p>
+//       </div>
+//     );
 //   }
 
 //   if (error) {
-//     return <div className="text-center text-red-500">{error}</div>;
+//     return (
+//       <div className="container mx-auto p-6 min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+//         <p className="text-red-500 text-lg font-medium">{error}</p>
+//       </div>
+//     );
 //   }
 
 //   if (!template) {
-//     return <div className="text-center text-gray-600 dark:text-gray-400">{t('template.not_found')}</div>;
+//     return (
+//       <div className="container mx-auto p-6 min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+//         <p className="text-gray-600 dark:text-gray-400 text-lg">{t('template.not_found')}</p>
+//       </div>
+//     );
 //   }
 
 //   const isCreator = template.created_by === auth?.user?.id;
 
 //   return (
-//     <div className="space-y-6">
-//       <div className="flex justify-between items-center">
-//         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">{template.title}</h1>
+//     <div className="container mx-auto p-6 bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-black min-h-screen">
+//       <div className="flex flex-col sm:flex-row justify-between items-center mb-8">
+//         <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 animate-fade-in">
+//           {template.title}
+//         </h1>
 //         {isCreator && (
 //           <button
 //             onClick={handleDeleteTemplate}
-//             className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors shadow disabled:bg-red-400"
+//             className="mt-4 sm:mt-0 bg-red-600 text-white px-5 py-2 rounded-full hover:bg-red-700 transition-colors shadow-lg disabled:bg-red-400 transform hover:-translate-y-1"
 //             disabled={isDeletingTemplate}
 //             aria-label={t('template.delete_template')}
 //           >
@@ -1833,7 +1962,7 @@ export default TemplatePage;
 //         )}
 //       </div>
 //       {notifications.length > 0 && (
-//         <div className="fixed top-4 right-4 z-50 space-y-2 w-80">
+//         <div className="fixed top-4 right-4 z-50 space-y-3 w-full max-w-sm">
 //           {notifications.map(n => (
 //             <Notification
 //               key={n.id}
@@ -1844,17 +1973,17 @@ export default TemplatePage;
 //           ))}
 //         </div>
 //       )}
-//       <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
+//       <div className="flex flex-wrap gap-2 sm:gap-4 border-b border-gray-200 dark:border-gray-700 mb-6">
 //         {isCreator
 //           ? ['settings', 'questions', 'aggregation', 'comments'].map(tabName => (
 //               <button
 //                 key={tabName}
 //                 onClick={() => setTab(tabName)}
-//                 className={`pb-2 px-4 text-lg font-medium ${
+//                 className={`py-2 px-4 text-base sm:text-lg font-semibold rounded-t-lg transition-colors ${
 //                   tab === tabName
-//                     ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400'
-//                     : 'text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400'
-//                 } transition-colors`}
+//                     ? 'bg-blue-600 text-white dark:bg-blue-500'
+//                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+//                 }`}
 //                 aria-label={`Switch to ${tabName} tab`}
 //               >
 //                 {t(`template.${tabName}`)}
@@ -1864,11 +1993,11 @@ export default TemplatePage;
 //               <button
 //                 key={tabName}
 //                 onClick={() => setTab(tabName)}
-//                 className={`pb-2 px-4 text-lg font-medium ${
+//                 className={`py-2 px-4 text-base sm:text-lg font-semibold rounded-t-lg transition-colors ${
 //                   tab === tabName
-//                     ? 'text-blue-600 border-b-2 border-blue-600 dark:text-blue-400 dark:border-blue-400'
-//                     : 'text-gray-600 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400'
-//                 } transition-colors`}
+//                     ? 'bg-blue-600 text-white dark:bg-blue-500'
+//                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+//                 }`}
 //                 aria-label={`Switch to ${tabName} tab`}
 //               >
 //                 {t(`template.${tabName}`)}
@@ -1876,18 +2005,18 @@ export default TemplatePage;
 //             ))}
 //       </div>
 //       {tab === 'settings' && isCreator && (
-//         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
+//         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-6 max-w-2xl mx-auto">
 //           <input
 //             value={template.title}
 //             onChange={e => setTemplate({ ...template, title: e.target.value })}
 //             placeholder={t('template.title')}
-//             className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm"
+//             className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300"
 //             aria-label={t('template.title')}
 //           />
 //           <MDXEditor
 //             markdown={template.description || ''}
 //             onChange={md => setTemplate({ ...template, description: md })}
-//             className="border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700 shadow-sm"
+//             className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 dark:bg-gray-700 shadow-sm"
 //             placeholder={t('template.description')}
 //           />
 //           <input
@@ -1895,43 +2024,43 @@ export default TemplatePage;
 //             value={tags.join(', ')}
 //             onChange={e => setTags(e.target.value.split(',').map(t => t.trim()))}
 //             placeholder={t('template.tags_placeholder')}
-//             className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm"
+//             className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300"
 //             aria-label={t('template.tags_placeholder')}
 //           />
-//           <label className="flex items-center space-x-2">
+//           <label className="flex items-center space-x-3">
 //             <input
 //               type="checkbox"
 //               checked={template.is_public}
 //               onChange={e => setTemplate({ ...template, is_public: e.target.checked })}
-//               className="h-5 w-5 text-blue-600 focus:ring-blue-400"
+//               className="h-5 w-5 text-blue-600 focus:ring-blue-500 rounded"
 //               aria-label={t('template.public')}
 //             />
-//             <span className="text-gray-800 dark:text-gray-100">{t('template.public')}</span>
+//             <span className="text-gray-800 dark:text-gray-100 font-medium">{t('template.public')}</span>
 //           </label>
-//           <div className="space-y-2">
+//           <div className="space-y-4">
 //             <input
 //               type="email"
 //               value={shareEmail}
 //               onChange={e => setShareEmail(e.target.value)}
 //               placeholder={t('template.add_user')}
-//               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm"
+//               className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300"
 //               aria-label={t('template.add_user')}
 //             />
 //             <button
 //               onClick={handleShare}
-//               className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors shadow disabled:bg-purple-400"
+//               className="bg-purple-600 text-white px-6 py-3 rounded-full hover:bg-purple-700 transition-colors shadow-lg disabled:bg-purple-400 transform hover:-translate-y-1"
 //               disabled={isSharing}
 //               aria-label={t('template.share_template')}
 //             >
 //               {isSharing ? t('loading') : t('template.share_template')}
 //             </button>
-//             {shareError && <p className="text-red-600">{shareError}</p>}
+//             {shareError && <p className="text-red-500 text-sm">{shareError}</p>}
 //             {template.access.length > 0 && (
 //               <div>
-//                 <p className="text-gray-800 dark:text-gray-100 font-medium">{t('template.shared_with')}</p>
-//                 <ul className="mt-2 space-y-1">
+//                 <p className="text-gray-800 dark:text-gray-100 font-semibold">{t('template.shared_with')}</p>
+//                 <ul className="mt-2 space-y-2">
 //                   {template.access.map(a => (
-//                     <li key={a.user_id} className="text-gray-600 dark:text-gray-400">
+//                     <li key={a.user_id} className="text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg p-2">
 //                       {a.user.email}
 //                     </li>
 //                   ))}
@@ -1941,7 +2070,7 @@ export default TemplatePage;
 //           </div>
 //           <button
 //             onClick={handleSaveSettings}
-//             className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow disabled:bg-blue-400"
+//             className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors shadow-lg disabled:bg-blue-400 transform hover:-translate-y-1"
 //             disabled={isSavingSettings}
 //             aria-label={t('template.save_settings')}
 //           >
@@ -1950,19 +2079,19 @@ export default TemplatePage;
 //         </div>
 //       )}
 //       {tab === 'questions' && isCreator && (
-//         <div className="space-y-6">
-//           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
+//         <div className="space-y-6 max-w-2xl mx-auto">
+//           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-4">
 //             <input
 //               value={questionTitle}
 //               onChange={e => setQuestionTitle(e.target.value)}
 //               placeholder={t('template.question_title')}
-//               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm"
+//               className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300"
 //               aria-label={t('template.question_title')}
 //             />
 //             <select
 //               value={questionType}
 //               onChange={e => setQuestionType(e.target.value)}
-//               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm"
+//               className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300"
 //               aria-label="Select question type"
 //             >
 //               <option value="single_line">{t('question_types.single_line')}</option>
@@ -1972,7 +2101,7 @@ export default TemplatePage;
 //             </select>
 //             <button
 //               onClick={handleAddQuestion}
-//               className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors shadow disabled:bg-green-400"
+//               className="bg-green-600 text-white px-6 py-3 rounded-full hover:bg-green-700 transition-colors shadow-lg disabled:bg-green-400 transform hover:-translate-y-1"
 //               disabled={isAddingQuestion}
 //               aria-label={t('template.add_question')}
 //             >
@@ -1985,7 +2114,7 @@ export default TemplatePage;
 //               strategy={verticalListSortingStrategy}
 //             >
 //               {template.questions.length === 0 ? (
-//                 <p className="text-gray-600 dark:text-gray-400">{t('template.no_questions')}</p>
+//                 <p className="text-gray-600 dark:text-gray-400 text-center">{t('template.no_questions')}</p>
 //               ) : (
 //                 template.questions.map(q => (
 //                   <SortableItem
@@ -2003,14 +2132,14 @@ export default TemplatePage;
 //         </div>
 //       )}
 //       {tab === 'submit' && !isCreator && (
-//         <div className="space-y-6">
-//           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
-//             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">{t('template.submit_form_title')}</h2>
+//         <div className="space-y-6 max-w-2xl mx-auto">
+//           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-6">
+//             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-2">{t('template.submit_form_title')}</h2>
 //             {template.questions
 //               .filter(q => q.type !== 'fixed_user' && q.type !== 'fixed_date')
 //               .map(q => (
-//                 <div key={q.id} className="space-y-2">
-//                   <label className="block text-gray-800 dark:text-gray-100 font-medium">
+//                 <div key={q.id} className="space-y-3">
+//                   <label className="block text-gray-800 dark:text-gray-100 font-semibold">
 //                     {q.title} {q.type !== 'checkbox' && <span className="text-red-500">*</span>}
 //                   </label>
 //                   {(q.type === 'single_line' || q.type === 'multi_line') && (
@@ -2018,7 +2147,7 @@ export default TemplatePage;
 //                       type="text"
 //                       value={answers[q.id] || ''}
 //                       onChange={e => handleAnswerChange(q.id, e.target.value)}
-//                       className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm ${
+//                       className={`w-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300 ${
 //                         formErrors[q.id] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
 //                       }`}
 //                       aria-label={`${q.title} input`}
@@ -2029,7 +2158,7 @@ export default TemplatePage;
 //                       type="number"
 //                       value={answers[q.id] || ''}
 //                       onChange={e => handleAnswerChange(q.id, e.target.value)}
-//                       className={`w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm ${
+//                       className={`w-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300 ${
 //                         formErrors[q.id] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
 //                       }`}
 //                       min="0"
@@ -2041,16 +2170,16 @@ export default TemplatePage;
 //                       type="checkbox"
 //                       checked={answers[q.id] === 'true'}
 //                       onChange={e => handleAnswerChange(q.id, e.target.checked ? 'true' : 'false')}
-//                       className="h-5 w-5 text-blue-600 focus:ring-blue-400"
+//                       className="h-5 w-5 text-blue-600 focus:ring-blue-500 rounded"
 //                       aria-label={`${q.title} checkbox`}
 //                     />
 //                   )}
-//                   {formErrors[q.id] && <p className="text-red-600 text-sm">{formErrors[q.id]}</p>}
+//                   {formErrors[q.id] && <p className="text-red-500 text-sm">{formErrors[q.id]}</p>}
 //                 </div>
 //               ))}
 //             <button
 //               onClick={handleSubmitForm}
-//               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow disabled:bg-blue-400"
+//               className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors shadow-lg disabled:bg-blue-400 transform hover:-translate-y-1"
 //               disabled={isSubmittingForm}
 //               aria-label={t('template.submit_form')}
 //             >
@@ -2060,19 +2189,19 @@ export default TemplatePage;
 //         </div>
 //       )}
 //       {tab === 'comments' && (
-//         <div className="space-y-6">
+//         <div className="space-y-6 max-w-2xl mx-auto">
 //           {!isCreator && (
-//             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-4 space-y-4">
+//             <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-4">
 //               <textarea
 //                 value={comment}
 //                 onChange={e => setComment(e.target.value)}
 //                 placeholder={t('template.add_comment')}
-//                 className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-700 dark:text-gray-100 shadow-sm"
+//                 className="w-full p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 shadow-sm transition-all duration-300"
 //                 aria-label={t('template.add_comment')}
 //               />
 //               <button
 //                 onClick={handleAddComment}
-//                 className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors shadow disabled:bg-green-400"
+//                 className="bg-green-600 text-white px-6 py-3 rounded-full hover:bg-green-700 transition-colors shadow-lg disabled:bg-green-400 transform hover:-translate-y-1"
 //                 disabled={isAddingComment}
 //                 aria-label={t('template.submit_comment')}
 //               >
@@ -2081,18 +2210,18 @@ export default TemplatePage;
 //             </div>
 //           )}
 //           {isCreator && (
-//             <p className="text-gray-600 dark:text-gray-400">{t('template.creator_cannot_comment')}</p>
+//             <p className="text-gray-600 dark:text-gray-400 text-center">{t('template.creator_cannot_comment')}</p>
 //           )}
 //           {template.comments.length === 0 ? (
-//             <p className="text-gray-600 dark:text-gray-400">{t('template.no_comments')}</p>
+//             <p className="text-gray-600 dark:text-gray-400 text-center">{t('template.no_comments')}</p>
 //           ) : (
 //             template.comments.map(c => (
 //               <div
 //                 key={c.id}
-//                 className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4"
+//                 className="p-5 bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow duration-300"
 //               >
 //                 <p className="text-gray-800 dark:text-gray-100">{c.content}</p>
-//                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+//                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
 //                   {t('template.by')} {c.user.name} {t('template.at')} {new Date(c.createdAt).toLocaleString()}
 //                 </p>
 //               </div>
@@ -2101,13 +2230,13 @@ export default TemplatePage;
 //         </div>
 //       )}
 //       {tab === 'aggregation' && isCreator && (
-//         <div className="space-y-6">
-//           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
-//             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">{t('template.form_analytics')}</h2>
-//             <p className="text-gray-800 dark:text-gray-100">{t('template.total_submissions')}: {template.forms?.length || 0}</p>
+//         <div className="space-y-6 max-w-2xl mx-auto">
+//           <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg space-y-4">
+//             <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-2">{t('template.form_analytics')}</h2>
+//             <p className="text-gray-800 dark:text-gray-100 font-medium">{t('template.total_submissions')}: {template.forms?.length || 0}</p>
 //             <button
 //               onClick={handleExportCSV}
-//               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow disabled:bg-blue-400"
+//               className="bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors shadow-lg disabled:bg-blue-400 transform hover:-translate-y-1"
 //               disabled={isExportingCSV}
 //               aria-label={t('template.export_csv')}
 //             >
@@ -2115,24 +2244,24 @@ export default TemplatePage;
 //             </button>
 //           </div>
 //           <div>
-//             <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+//             <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 border-b-2 border-purple-500 pb-2">
 //               {t('template.previous_submissions')}
 //             </h3>
 //             {!template.forms || template.forms.length === 0 ? (
-//               <p className="text-gray-600 dark:text-gray-400">{t('template.no_submissions')}</p>
+//               <p className="text-gray-600 dark:text-gray-400 text-center">{t('template.no_submissions')}</p>
 //             ) : (
 //               template.forms.map(form => (
 //                 <div
 //                   key={form.id}
-//                   className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4"
+//                   className="p-5 bg-white dark:bg-gray-800 rounded-xl shadow-md mb-4 border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow duration-300"
 //                 >
-//                   <p className="text-gray-800 dark:text-gray-100">{t('template.submitted_by')}: {form.user?.name || t('home.unknown_author')}</p>
+//                   <p className="text-gray-800 dark:text-gray-100 font-medium">{t('template.submitted_by')}: {form.user?.name || t('home.unknown_author')}</p>
 //                   <p className="text-gray-600 dark:text-gray-400">
 //                     {t('template.submitted_at')}: {new Date(form.createdAt).toLocaleString()}
 //                   </p>
-//                   <ul className="mt-2 space-y-1">
+//                   <ul className="mt-3 space-y-2">
 //                     {form.answers.map(a => (
-//                       <li key={a.id} className="text-gray-600 dark:text-gray-400">
+//                       <li key={a.id} className="text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg p-2">
 //                         {a.question?.title || t('template.unknown_question')}: {a.value}
 //                       </li>
 //                     ))}
@@ -2142,55 +2271,59 @@ export default TemplatePage;
 //             )}
 //           </div>
 //           <div>
-//             <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4">
+//             <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 border-b-2 border-purple-500 pb-2">
 //               {t('template.answer_breakdown')}
 //             </h3>
 //             {template.questions.length === 0 ? (
-//               <p className="text-gray-600 dark:text-gray-400">{t('template.no_questions')}</p>
+//               <p className="text-gray-600 dark:text-gray-400 text-center">{t('template.no_questions')}</p>
 //             ) : (
 //               template.questions.map(q => {
 //                 const agg = template.aggregation?.find(agg => agg.question_id === q.id);
 //                 return (
 //                   <div
 //                     key={q.id}
-//                     className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-md mb-4"
+//                     className="p-5 bg-white dark:bg-gray-800 rounded-xl shadow-md mb-4 border border-gray-200 dark:border-gray-600 hover:shadow-lg transition-shadow duration-300"
 //                   >
-//                     <p className="font-medium text-gray-800 dark:text-gray-100">{q.title}</p>
+//                     <p className="font-semibold text-gray-800 dark:text-gray-100">{q.title}</p>
 //                     {(q.type === 'single_line' || q.type === 'multi_line' || q.type === 'positive_integer') ? (
-//                       <ul className="mt-2 space-y-1">
+//                       <ul className="mt-3 space-y-2">
 //                         {template.forms
 //                           ?.map(f => f.answers.find(a => a.question_id === q.id)?.value)
 //                           .filter(v => v)
 //                           .map((value, idx) => (
-//                             <li key={idx} className="text-sm text-gray-600 dark:text-gray-400">
+//                             <li key={idx} className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg p-2">
 //                               {value}
 //                             </li>
 //                           )) || <li className="text-sm text-gray-600 dark:text-gray-400">{t('template.no_answers')}</li>}
 //                       </ul>
 //                     ) : q.type === 'checkbox' ? (
-//                       <p className="text-gray-600 dark:text-gray-400 mt-2">
+//                       <p className="text-gray-600 dark:text-gray-400 mt-3">
 //                         {t('yes')}: {' '}
-//                         {template.forms?.filter(f =>
-//                           f.answers.find(a => a.question_id === q.id)?.value === 'true'
-//                         ).length || 0}{' '}
+//                         <span className="font-medium text-blue-600 dark:text-blue-400">
+//                           {template.forms?.filter(f =>
+//                             f.answers.find(a => a.question_id === q.id)?.value === 'true'
+//                           ).length || 0}
+//                         </span>{' '}
 //                         | {t('no')}: {' '}
-//                         {template.forms?.filter(f =>
-//                           f.answers.find(a => a.question_id === q.id)?.value === 'false'
-//                         ).length || 0}
+//                         <span className="font-medium text-blue-600 dark:text-blue-400">
+//                           {template.forms?.filter(f =>
+//                             f.answers.find(a => a.question_id === q.id)?.value === 'false'
+//                           ).length || 0}
+//                         </span>
 //                       </p>
 //                     ) : (
-//                       <p className="text-gray-600 dark:text-gray-400 mt-2">{t('template.no_data')}</p>
+//                       <p className="text-gray-600 dark:text-gray-400 mt-3">{t('template.no_data')}</p>
 //                     )}
 //                     {q.type === 'positive_integer' && agg && (
-//                       <div className="mt-2">
+//                       <div className="mt-3 space-y-1">
 //                         <p className="text-gray-600 dark:text-gray-400">
-//                           {t('template.count')}: {agg._count?.value || 0}
+//                           {t('template.count')}: <span className="font-medium text-blue-600 dark:text-blue-400">{agg._count?.value || 0}</span>
 //                         </p>
 //                         <p className="text-gray-600 dark:text-gray-400">
-//                           {t('template.average')}: {agg._avg ? agg._avg.toFixed(2) : 'N/A'}
+//                           {t('template.average')}: <span className="font-medium text-blue-600 dark:text-blue-400">{agg._avg ? agg._avg.toFixed(2) : 'N/A'}</span>
 //                         </p>
 //                         <p className="text-gray-600 dark:text-gray-400">
-//                           {t('template.max')}: {agg._max || 'N/A'}
+//                           {t('template.max')}: <span className="font-medium text-blue-600 dark:text-blue-400">{agg._max || 'N/A'}</span>
 //                         </p>
 //                       </div>
 //                     )}
