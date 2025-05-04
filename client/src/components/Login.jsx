@@ -85,7 +85,7 @@ export default function Login() {
             disabled={isLoading}
             className="w-full bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition duration-300 transform hover:scale-105 disabled:bg-teal-400 disabled:cursor-not-allowed"
           >
-            {isLoading ? {t('login.submitting')} : {t('login.submit')}}
+            {isLoading ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
         <p className="mt-6 text-center text-gray-600 dark:text-gray-400 text-sm">
