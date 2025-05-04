@@ -189,6 +189,7 @@ const resources = {
         error: 'Invalid email or password',
         noAccount: 'Don’t have an account?',
         register:'Register',
+        submitting:'Logging in...',
       },
       register: {
         title: 'Register',
@@ -413,6 +414,7 @@ const resources = {
         error: 'Correo electrónico o contraseña inválidos',
         noAccount: '¿No tienes una cuenta?',
         register:'Registro',
+        submitting:'Iniciando sesión...',
       },
       register: {
         title: 'Registrarse',
