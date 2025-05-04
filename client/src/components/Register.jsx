@@ -96,11 +96,17 @@ export default function Register() {
           </button>
         </form>
         <p className="mt-6 text-center text-gray-600 dark:text-gray-400 text-sm">
+          {t('register.haveAccount')}{' '}
+          <Link to="/login" className="text-teal-600 dark:text-teal-400 hover:underline font-medium">
+            {t('register.login')}
+          </Link>
+        </p>
+{/*         <p className="mt-6 text-center text-gray-600 dark:text-gray-400 text-sm">
           Already have an account?{' '}
           <Link to="/login" className="text-teal-600 dark:text-teal-400 hover:underline font-medium">
             Login
           </Link>
-        </p>
+        </p> */}
       </div>
     </div>
   );
