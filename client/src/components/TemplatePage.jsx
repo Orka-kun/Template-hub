@@ -28,12 +28,18 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
   const [editType, setEditType] = useState(type);
+  const saveButtonRef = useRef(null);
+  const deleteButtonRef = useRef(null);
 
   const handleSaveEdit = async () => {
     if (editTitle.trim() && editType) {
       await onEdit(id, editTitle, editType);
       setIsEditing(false);
     }
+  };
+
+  const handleDelete = () => {
+    onDelete(id);
   };
 
   return (
@@ -52,10 +58,12 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
             onChange={(e) => setEditTitle(e.target.value)}
             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
             aria-label="Edit question title"
+            onBlur={handleSaveEdit}
           />
           <select
             value={editType}
             onChange={(e) => setEditType(e.target.value)}
+            onBlur={handleSaveEdit}
             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100"
             aria-label="Edit question type"
           >
@@ -64,20 +72,6 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
             <option value="positive_integer">{t('question_types.positive_integer')}</option>
             <option value="checkbox">{t('question_types.checkbox')}</option>
           </select>
-          <button
-            onClick={handleSaveEdit}
-            className="bg-blue-600 text-white px-3 py-1 rounded-full hover:bg-blue-700 transition-colors"
-            aria-label={t('template.save_edit')}
-          >
-            {t('template.save_edit')}
-          </button>
-          <button
-            onClick={() => setIsEditing(false)}
-            className="bg-gray-600 text-white px-3 py-1 rounded-full hover:bg-gray-700 transition-colors ml-2"
-            aria-label={t('template.cancel_edit')}
-          >
-            {t('template.cancel')}
-          </button>
         </div>
       ) : (
         <span className="text-gray-800 dark:text-gray-100 font-medium">{title} - {t(`question_types.${type}`)}</span>
@@ -85,6 +79,7 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
       {isCreator && (
         <div className="flex space-x-2">
           <button
+            ref={saveButtonRef}
             onClick={() => (isEditing ? handleSaveEdit() : setIsEditing(true))}
             className="text-blue-500 hover:text-blue-700 transition-colors font-semibold"
             aria-label={isEditing ? t('template.save_edit') : t('template.edit')}
@@ -92,7 +87,8 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
             {isEditing ? t('template.save_edit') : t('template.edit')}
           </button>
           <button
-            onClick={() => onDelete(id)}
+            ref={deleteButtonRef}
+            onClick={handleDelete}
             className="text-red-500 hover:text-red-700 transition-colors font-semibold"
             aria-label={t('template.delete')}
           >
@@ -452,12 +448,10 @@ function TemplatePage() {
         ]);
       } else if (error.response?.status === 400) {
         setNotifications((prev) => [
-          ...prev,
           { id: Date.now(), message: `${t('template.error_updating_question')}: ${error.response?.data?.error || t('error.unknown')}`, type: 'error' },
         ]);
       } else {
         setNotifications((prev) => [
-          ...prev,
           { id: Date.now(), message: `${t('template.error_updating_question')}: ${error.response?.data?.error || t('error.unknown')}`, type: 'error' },
         ]);
       }
@@ -1226,6 +1220,8 @@ function TemplatePage() {
 }
 
 export default TemplatePage;
+
+
 // import { useEffect, useState, useCallback, useRef } from 'react';
 // import { useParams, useNavigate } from 'react-router-dom';
 // import { useAuth } from '../context/AuthContext';
