@@ -23,25 +23,21 @@ function Header({ changeLanguage }) {
   const { auth, logout } = useAuth();
   const navigate = useNavigate();
   const [theme, setTheme] = useState(() => {
-    // Initialize theme from localStorage for unauthenticated users
     return localStorage.getItem('theme') || 'light';
   });
   const [language, setLanguage] = useState(() => {
     return localStorage.getItem('language') || 'en';
   });
   const [error, setError] = useState(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // For mobile menu toggle
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Memoize navigate and logout
   const memoizedNavigate = useCallback(navigate, []);
   const memoizedLogout = useCallback(logout, []);
 
-  // Apply theme on mount
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
-  // Debounced fetchProfile function
   const fetchProfile = useCallback(
     debounce(async () => {
       try {
@@ -54,7 +50,7 @@ function Header({ changeLanguage }) {
         setLanguage(fetchedLanguage);
         i18n.changeLanguage(fetchedLanguage);
         document.documentElement.classList.toggle('dark', fetchedTheme === 'dark');
-        localStorage.setItem('theme', fetchedTheme); // Sync localStorage with server
+        localStorage.setItem('theme', fetchedTheme);
         localStorage.setItem('language', fetchedLanguage);
       } catch (err) {
         console.error('Failed to fetch profile:', err.response?.data?.error || err.message);
@@ -70,7 +66,6 @@ function Header({ changeLanguage }) {
 
   useEffect(() => {
     if (!auth?.token) return;
-
     fetchProfile();
   }, [auth?.token, fetchProfile]);
 
@@ -79,10 +74,9 @@ function Header({ changeLanguage }) {
       const newTheme = theme === 'light' ? 'dark' : 'light';
       setTheme(newTheme);
       document.documentElement.classList.toggle('dark', newTheme === 'dark');
-      localStorage.setItem('theme', newTheme); // Persist theme for all users
+      localStorage.setItem('theme', newTheme);
 
       if (auth?.token) {
-        // For authenticated users, update via API
         try {
           await axios.put(
             `${import.meta.env.VITE_API_URL}/api/auth/profile`,
@@ -105,7 +99,6 @@ function Header({ changeLanguage }) {
   const handleLanguageChange = useCallback(
     debounce(async (lang) => {
       if (auth?.token) {
-        // For authenticated users, update via API
         try {
           await axios.put(
             `${import.meta.env.VITE_API_URL}/api/auth/profile`,
@@ -124,10 +117,9 @@ function Header({ changeLanguage }) {
           }
         }
       } else {
-        // For unauthenticated users, change locally and persist
         setLanguage(lang);
         i18n.changeLanguage(lang);
-        localStorage.setItem('language', lang); // Persist language choice
+        localStorage.setItem('language', lang);
         if (changeLanguage) changeLanguage(lang);
       }
     }, 500),
@@ -140,19 +132,19 @@ function Header({ changeLanguage }) {
   };
 
   return (
-    <header className="bg-gradient-to-r from-gray-900 to-gray-800 dark:from-gray-700 dark:to-gray-600 text-white dark:text-gray-200 shadow-lg">
+    <header className="bg-gradient-to-r from-teal-700 to-teal-600 dark:from-indigo-900 dark:to-indigo-800 text-white dark:text-gray-100 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          <h1 className="text-3xl font-bold tracking-wide text-teal-300 dark:text-teal-200">{t('app.title')}✓</h1>
+          <h1 className="text-3xl font-bold tracking-wide text-teal-100 dark:text-indigo-200">{t('app.title')}✓</h1>
 
           {error && <p className="text-red-300 text-sm absolute top-6 right-6 bg-red-900/50 dark:bg-red-800/50 p-2 rounded">{error}</p>}
 
           <div className="flex items-center space-x-6">
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="hover:text-teal-300 dark:hover:text-teal-200 transition duration-300 font-semibold">{t('header.home')}</Link>
+              <Link to="/" className="hover:text-teal-100 dark:hover:text-indigo-200 transition duration-300 font-semibold">{t('header.home')}</Link>
               {auth?.token ? (
                 <>
-                  <Link to="/personal" className="hover:text-teal-300 dark:hover:text-teal-200 transition duration-300 font-semibold">{t('header.personal')}</Link>
+                  <Link to="/personal" className="hover:text-teal-100 dark:hover:text-indigo-200 transition duration-300 font-semibold">{t('header.personal')}</Link>
                   <button
                     onClick={handleLogout}
                     className="hover:text-red-300 dark:hover:text-red-200 transition duration-300 font-semibold"
@@ -169,33 +161,32 @@ function Header({ changeLanguage }) {
               <select
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value)}
-                className="bg-gray-800 dark:bg-gray-600 text-white dark:text-gray-200 px-4 py-2 rounded-lg border border-gray-700 dark:border-gray-500 focus:outline-none focus:ring-2 focus:ring-teal-400 transition duration-300"
+                className="bg-teal-800 dark:bg-indigo-700 text-white dark:text-gray-100 px-4 py-2 rounded-lg border border-teal-600 dark:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400 transition duration-300"
               >
-                <option value="en" className="bg-gray-800 dark:bg-gray-600">{t('header.english')}</option>
-                <option value="es" className="bg-gray-800 dark:bg-gray-600">{t('header.spanish')}</option>
+                <option value="en" className="bg-teal-800 dark:bg-indigo-700">{t('header.english')}</option>
+                <option value="es" className="bg-teal-800 dark:bg-indigo-700">{t('header.spanish')}</option>
               </select>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg bg-gray-700 dark:bg-gray-500 hover:bg-gray-600 dark:hover:bg-gray-400 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                className="p-2 rounded-lg bg-teal-700 dark:bg-indigo-700 hover:bg-teal-600 dark:hover:bg-indigo-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400"
                 aria-label={theme === 'light' ? t('header.switch_to_dark_mode') : t('header.switch_to_light_mode')}
               >
                 {theme === 'light' ? (
-                  <svg className="w-6 h-6 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-yellow-300 dark:text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                 ) : (
-                  <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-gray-300 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                   </svg>
                 )}
               </button>
             </nav>
 
-            {/* Mobile Menu Button */}
             <div className="md:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-white dark:text-gray-200 focus:outline-none"
+                className="text-white dark:text-gray-100 focus:outline-none"
               >
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
@@ -203,49 +194,48 @@ function Header({ changeLanguage }) {
               </button>
             </div>
 
-            {/* Mobile Menu */}
             {isMenuOpen && (
-              <div className="absolute top-20 right-4 w-48 bg-gray-800 dark:bg-gray-600 rounded-lg shadow-lg p-4 md:hidden z-50">
-                <Link to="/" className="block px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-500 rounded text-white dark:text-gray-200" onClick={() => setIsMenuOpen(false)}>{t('header.home')}</Link>
+              <div className="absolute top-20 right-4 w-48 bg-teal-800 dark:bg-indigo-700 rounded-lg shadow-lg p-4 md:hidden z-50">
+                <Link to="/" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.home')}</Link>
                 {auth?.token ? (
                   <>
-                    <Link to="/personal" className="block px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-500 rounded text-white dark:text-gray-200" onClick={() => setIsMenuOpen(false)}>{t('header.personal')}</Link>
+                    <Link to="/personal" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.personal')}</Link>
                     <button
                       onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                      className="block w-full text-left px-4 py-2 hover:bg-red-700 dark:hover:bg-red-600 rounded text-white dark:text-gray-200"
+                      className="block w-full text-left px-4 py-2 hover:bg-red-700 dark:hover:bg-red-600 rounded text-white dark:text-gray-100"
                     >
                       {t('header.logout')}
                     </button>
                   </>
                 ) : (
                   <>
-                    <Link to="/login" className="block px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-500 rounded text-white dark:text-gray-200" onClick={() => setIsMenuOpen(false)}>{t('header.login')}</Link>
-                    <Link to="/register" className="block px-4 py-2 hover:bg-gray-700 dark:hover:bg-gray-500 rounded text-white dark:text-gray-200" onClick={() => setIsMenuOpen(false)}>{t('header.register')}</Link>
+                    <Link to="/login" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.login')}</Link>
+                    <Link to="/register" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.register')}</Link>
                   </>
                 )}
                 <select
                   value={language}
                   onChange={(e) => { handleLanguageChange(e.target.value); setIsMenuOpen(false); }}
-                  className="w-full bg-gray-700 dark:bg-gray-500 text-white dark:text-gray-200 px-4 py-2 mt-2 rounded-lg border border-gray-600 dark:border-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-400"
+                  className="w-full bg-teal-700 dark:bg-indigo-600 text-white dark:text-gray-100 px-4 py-2 mt-2 rounded-lg border border-teal-600 dark:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400"
                 >
-                  <option value="en" className="bg-gray-700 dark:bg-gray-500">{t('header.english')}</option>
-                  <option value="es" className="bg-gray-700 dark:bg-gray-500">{t('header.spanish')}</option>
+                  <option value="en" className="bg-teal-700 dark:bg-indigo-600">{t('header.english')}</option>
+                  <option value="es" className="bg-teal-700 dark:bg-indigo-600">{t('header.spanish')}</option>
                 </select>
                 <button
                   onClick={() => { toggleTheme(); setIsMenuOpen(false); }}
-                  className="w-full flex items-center px-4 py-2 mt-2 rounded-lg bg-gray-700 dark:bg-gray-500 hover:bg-gray-600 dark:hover:bg-gray-400 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400 text-white dark:text-gray-200"
+                  className="w-full flex items-center px-4 py-2 mt-2 rounded-lg bg-teal-700 dark:bg-indigo-600 hover:bg-teal-600 dark:hover:bg-indigo-500 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400 text-white dark:text-gray-100"
                   aria-label={theme === 'light' ? t('header.switch_to_dark_mode') : t('header.switch_to_light_mode')}
                 >
                   {theme === 'light' ? (
                     <>
-                      <svg className="w-6 h-6 text-yellow-300 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-yellow-300 dark:text-yellow-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
                       {t('header.switch_to_dark_mode')}
                     </>
                   ) : (
                     <>
-                      <svg className="w-6 h-6 text-gray-300 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-6 h-6 text-gray-300 dark:text-gray-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                       </svg>
                       {t('header.switch_to_light_mode')}
