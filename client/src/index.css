@@ -1,7 +1,7 @@
 @import "tailwindcss";
-/* @tailwind base;
+@tailwind base;
 @tailwind components;
-@tailwind utilities; */
+@tailwind utilities;
 
 :root {
   --bg-color: #ffffff;
@@ -71,3 +71,76 @@ table {
     @apply text-sm px-2 py-1;
   }
 }
+/* @import "tailwindcss"; */
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+/* :root {
+  --bg-color: #ffffff;
+  --text-color: #000000;
+  --border-color: #e5e7eb;
+}
+
+.dark {
+  --bg-color: #1f2937;
+  --text-color: #ffffff;
+  --border-color: #4b5563;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+input, textarea, select {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+table {
+  border-color: var(--border-color);
+}
+
+.border {
+  border-color: var(--border-color);
+}
+
+.tabs {
+  @apply flex flex-col;
+}
+
+.tabs input[type="radio"] {
+  @apply hidden;
+}
+
+.tabs label {
+  @apply px-4 py-2 cursor-pointer bg-gray-200 dark:bg-gray-700 mr-2 rounded-t;
+}
+
+.tabs input[type="radio"]:checked + label {
+  @apply bg-white dark:bg-gray-800 font-bold;
+}
+
+.tab-content {
+  @apply hidden p-4 border dark:border-gray-600 rounded-b;
+}
+
+.tabs input[type="radio"]:checked + label + .tab-content {
+  @apply block;
+}
+
+@media (max-width: 640px) {
+  .container {
+    @apply px-2;
+  }
+
+  table {
+    @apply text-sm;
+  }
+
+  .tabs label {
+    @apply text-sm px-2 py-1;
+  }
+} */
