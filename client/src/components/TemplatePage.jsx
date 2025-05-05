@@ -944,7 +944,7 @@ function TemplatePage() {
                   ))}
                 </ul>
               </div>
-            )}
+            ))}
           </div>
           <button
             onClick={handleSaveSettings}
