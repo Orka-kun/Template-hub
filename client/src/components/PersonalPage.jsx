@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/Auth merchandisingContext';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 // Debounce utility to prevent rapid API calls
