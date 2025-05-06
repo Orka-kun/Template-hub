@@ -45,12 +45,13 @@ function SortableItem({ id, title, type, onDelete, onEdit, t, isCreator }) {
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      
       {...attributes}
       {...listeners}
       className="p-4 rounded-xl shadow-md mb-4 flex justify-between items-center border hover:shadow-lg transition-shadow duration-300"
       style={{ backgroundColor: `var(--card-bg)`, borderColor: `var(--border-color)` }}
     >
+{/*       style={style} */}
       {isEditing ? (
         <div className="flex-1 space-y-2">
           <input
