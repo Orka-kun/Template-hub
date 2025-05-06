@@ -35,7 +35,7 @@ function Header({ changeLanguage }) {
   const memoizedLogout = useCallback(logout, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.body.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   const fetchProfile = useCallback(
@@ -49,7 +49,7 @@ function Header({ changeLanguage }) {
         setTheme(fetchedTheme);
         setLanguage(fetchedLanguage);
         i18n.changeLanguage(fetchedLanguage);
-        document.documentElement.classList.toggle('dark', fetchedTheme === 'dark');
+        document.body.classList.toggle('dark', fetchedTheme === 'dark');
         localStorage.setItem('theme', fetchedTheme);
         localStorage.setItem('language', fetchedLanguage);
       } catch (err) {
@@ -73,7 +73,7 @@ function Header({ changeLanguage }) {
     debounce(async () => {
       const newTheme = theme === 'light' ? 'dark' : 'light';
       setTheme(newTheme);
-      document.documentElement.classList.toggle('dark', newTheme === 'dark');
+      document.body.classList.toggle('dark', newTheme === 'dark');
       localStorage.setItem('theme', newTheme);
 
       if (auth?.token) {
@@ -132,62 +132,123 @@ function Header({ changeLanguage }) {
   };
 
   return (
-    <header className="bg-gradient-to-r from-teal-700 to-teal-600 dark:from-indigo-900 dark:to-indigo-800 text-white dark:text-gray-100 shadow-lg">
+    <header
+      style={{
+        background: `linear-gradient(to right, var(--header-bg-from), var(--header-bg-to))`,
+        color: `var(--header-text)`,
+      }}
+      className="shadow-lg"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
-          <h1 className="text-3xl font-bold tracking-wide text-teal-100 dark:text-indigo-200">{t('app.title')}✓</h1>
+          <h1 className="text-3xl font-bold tracking-wide">{t('app.title')}✓</h1>
 
-          {error && <p className="text-red-300 text-sm absolute top-6 right-6 bg-red-900/50 dark:bg-red-800/50 p-2 rounded">{error}</p>}
+          {error && (
+            <p
+              style={{ backgroundColor: 'rgba(220, 38, 38, 0.5)', color: '#fee2e2' }}
+              className="text-sm absolute top-6 right-6 p-2 rounded"
+            >
+              {error}
+            </p>
+          )}
 
           <div className="flex items-center space-x-6">
             <nav className="hidden md:flex items-center space-x-6">
-              <Link to="/" className="hover:text-teal-100 dark:hover:text-indigo-200 transition duration-300 font-semibold">{t('header.home')}</Link>
+              <Link to="/" className="hover:opacity-80 transition duration-300 font-semibold">
+                {t('header.home')}
+              </Link>
               {auth?.token ? (
                 <>
-                  <Link to="/personal" className="hover:text-teal-100 dark:hover:text-indigo-200 transition duration-300 font-semibold">{t('header.personal')}</Link>
+                  <Link to="/personal" className="hover:opacity-80 transition duration-300 font-semibold">
+                    {t('header.personal')}
+                  </Link>
                   <button
                     onClick={handleLogout}
-                    className="hover:text-red-300 dark:hover:text-red-200 transition duration-300 font-semibold"
+                    style={{ color: '#f87171' }}
+                    className="hover:opacity-80 transition duration-300 font-semibold"
                   >
                     {t('header.logout')}
                   </button>
                 </>
               ) : (
                 <>
-                  <Link to="/login" className="hover:text-blue-300 dark:hover:text-blue-200 transition duration-300 font-semibold">{t('header.login')}</Link>
-                  <Link to="/register" className="hover:text-blue-300 dark:hover:text-blue-200 transition duration-300 font-semibold">{t('header.register')}</Link>
+                  <Link
+                    to="/login"
+                    style={{ color: `var(--accent-color)` }}
+                    className="hover:opacity-80 transition duration-300 font-semibold"
+                  >
+                    {t('header.login')}
+                  </Link>
+                  <Link
+                    to="/register"
+                    style={{ color: `var(--accent-color)` }}
+                    className="hover:opacity-80 transition duration-300 font-semibold"
+                  >
+                    {t('header.register')}
+                  </Link>
                 </>
               )}
               <select
                 value={language}
                 onChange={(e) => handleLanguageChange(e.target.value)}
-                className="bg-teal-800 dark:bg-indigo-700 text-white dark:text-gray-100 px-4 py-2 rounded-lg border border-teal-600 dark:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400 transition duration-300"
+                style={{
+                  backgroundColor: `color-mix(in srgb, var(--header-bg-from) 90%, black)`,
+                  borderColor: `var(--border-color)`,
+                  color: `var(--header-text)`,
+                }}
+                className="px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 transition duration-300"
               >
-                <option value="en" className="bg-teal-800 dark:bg-indigo-700">{t('header.english')}</option>
-                <option value="es" className="bg-teal-800 dark:bg-indigo-700">{t('header.spanish')}</option>
+                <option
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--header-bg-from) 90%, black)`,
+                    color: `var(--header-text)`,
+                  }}
+                  value="en"
+                >
+                  {t('header.english')}
+                </option>
+                <option
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--header-bg-from) 90%, black)`,
+                    color: `var(--header-text)`,
+                  }}
+                  value="es"
+                >
+                  {t('header.spanish')}
+                </option>
               </select>
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg bg-teal-700 dark:bg-indigo-700 hover:bg-teal-600 dark:hover:bg-indigo-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400"
+                style={{
+                  backgroundColor: `color-mix(in srgb, var(--header-bg-from) 90%, black)`,
+                }}
+                className="p-2 rounded-lg hover:opacity-80 transition duration-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
                 aria-label={theme === 'light' ? t('header.switch_to_dark_mode') : t('header.switch_to_light_mode')}
               >
                 {theme === 'light' ? (
-                  <svg className="w-6 h-6 text-yellow-300 dark:text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  <svg className="w-6 h-6 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
                   </svg>
                 ) : (
-                  <svg className="w-6 h-6 text-gray-300 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                  <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                    />
                   </svg>
                 )}
               </button>
             </nav>
 
             <div className="md:hidden">
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-white dark:text-gray-100 focus:outline-none"
-              >
+              <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="focus:outline-none">
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
                 </svg>
@@ -195,48 +256,121 @@ function Header({ changeLanguage }) {
             </div>
 
             {isMenuOpen && (
-              <div className="absolute top-20 right-4 w-48 bg-teal-800 dark:bg-indigo-700 rounded-lg shadow-lg p-4 md:hidden z-50">
-                <Link to="/" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.home')}</Link>
+              <div
+                style={{
+                  backgroundColor: `color-mix(in srgb, var(--header-bg-from) 90%, black)`,
+                }}
+                className="absolute top-20 right-4 w-48 rounded-lg shadow-lg p-4 md:hidden z-50"
+              >
+                <Link
+                  to="/"
+                  className="block px-4 py-2 hover:opacity-80 rounded"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {t('header.home')}
+                </Link>
                 {auth?.token ? (
                   <>
-                    <Link to="/personal" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.personal')}</Link>
+                    <Link
+                      to="/personal"
+                      className="block px-4 py-2 hover:opacity-80 rounded"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {t('header.personal')}
+                    </Link>
                     <button
-                      onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                      className="block w-full text-left px-4 py-2 hover:bg-red-700 dark:hover:bg-red-600 rounded text-white dark:text-gray-100"
+                      onClick={() => {
+                        handleLogout();
+                        setIsMenuOpen(false);
+                      }}
+                      style={{ backgroundColor: '#b91c1c' }}
+                      className="block w-full text-left px-4 py-2 hover:opacity-80 rounded"
                     >
                       {t('header.logout')}
                     </button>
                   </>
                 ) : (
                   <>
-                    <Link to="/login" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.login')}</Link>
-                    <Link to="/register" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.register')}</Link>
+                    <Link
+                      to="/login"
+                      className="block px-4 py-2 hover:opacity-80 rounded"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {t('header.login')}
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="block px-4 py-2 hover:opacity-80 rounded"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {t('header.register')}
+                    </Link>
                   </>
                 )}
                 <select
                   value={language}
-                  onChange={(e) => { handleLanguageChange(e.target.value); setIsMenuOpen(false); }}
-                  className="w-full bg-teal-700 dark:bg-indigo-600 text-white dark:text-gray-100 px-4 py-2 mt-2 rounded-lg border border-teal-600 dark:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400"
+                  onChange={(e) => {
+                    handleLanguageChange(e.target.value);
+                    setIsMenuOpen(false);
+                  }}
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--header-bg-from) 95%, black)`,
+                    borderColor: `var(--border-color)`,
+                    color: `var(--header-text)`,
+                  }}
+                  className="w-full px-4 py-2 mt-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400"
                 >
-                  <option value="en" className="bg-teal-700 dark:bg-indigo-600">{t('header.english')}</option>
-                  <option value="es" className="bg-teal-700 dark:bg-indigo-600">{t('header.spanish')}</option>
+                  <option
+                    style={{
+                      backgroundColor: `color-mix(in srgb, var(--header-bg-from) 95%, black)`,
+                      color: `var(--header-text)`,
+                    }}
+                    value="en"
+                  >
+                    {t('header.⁁english')}
+                  </option>
+                  <option
+                    style={{
+                      backgroundColor: `color-mix(in srgb, var(--header-bg-from) 95%, black)`,
+                      color: `var(--header-text)`,
+                    }}
+                    value="es"
+                  >
+                    {t('header.spanish')}
+                  </option>
                 </select>
                 <button
-                  onClick={() => { toggleTheme(); setIsMenuOpen(false); }}
-                  className="w-full flex items-center px-4 py-2 mt-2 rounded-lg bg-teal-700 dark:bg-indigo-600 hover:bg-teal-600 dark:hover:bg-indigo-500 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400 text-white dark:text-gray-100"
+                  onClick={() => {
+                    toggleTheme();
+                    setIsMenuOpen(false);
+                  }}
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--header-bg-from) 90%, black)`,
+                  }}
+                  className="w-full flex items-center px-4 py-2 mt-2 rounded-lg hover:opacity-80 transition duration-300 focus:outline-none focus:ring-2 focus:ring-pink-400"
                   aria-label={theme === 'light' ? t('header.switch_to_dark_mode') : t('header.switch_to_light_mode')}
                 >
                   {theme === 'light' ? (
                     <>
-                      <svg className="w-6 h-6 text-yellow-300 dark:text-yellow-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                      <svg className="w-6 h-6 text-yellow-300 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                        />
                       </svg>
                       {t('header.switch_to_dark_mode')}
                     </>
                   ) : (
                     <>
-                      <svg className="w-6 h-6 text-gray-300 dark:text-gray-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                      <svg className="w-6 h-6 text-gray-300 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                        />
                       </svg>
                       {t('header.switch_to_light_mode')}
                     </>
@@ -276,26 +410,36 @@ export default Header;
 //   const { t, i18n } = useTranslation();
 //   const { auth, logout } = useAuth();
 //   const navigate = useNavigate();
-//   const [theme, setTheme] = useState('light');
-//   const [language, setLanguage] = useState('en');
+//   const [theme, setTheme] = useState(() => {
+//     return localStorage.getItem('theme') || 'light';
+//   });
+//   const [language, setLanguage] = useState(() => {
+//     return localStorage.getItem('language') || 'en';
+//   });
 //   const [error, setError] = useState(null);
-//   const [isMenuOpen, setIsMenuOpen] = useState(false); // For mobile menu toggle
+//   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-//   // Memoize navigate and logout
 //   const memoizedNavigate = useCallback(navigate, []);
 //   const memoizedLogout = useCallback(logout, []);
 
-//   // Debounced fetchProfile function
+//   useEffect(() => {
+//     document.documentElement.classList.toggle('dark', theme === 'dark');
+//   }, [theme]);
+
 //   const fetchProfile = useCallback(
 //     debounce(async () => {
 //       try {
 //         const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/profile`, {
 //           headers: { Authorization: `Bearer ${auth.token}` },
 //         });
-//         setTheme(res.data.theme_preference || 'light');
-//         setLanguage(res.data.language_preference || 'en');
-//         i18n.changeLanguage(res.data.language_preference || 'en');
-//         document.documentElement.classList.toggle('dark', res.data.theme_preference === 'dark');
+//         const fetchedTheme = res.data.theme_preference || 'light';
+//         const fetchedLanguage = res.data.language_preference || 'en';
+//         setTheme(fetchedTheme);
+//         setLanguage(fetchedLanguage);
+//         i18n.changeLanguage(fetchedLanguage);
+//         document.documentElement.classList.toggle('dark', fetchedTheme === 'dark');
+//         localStorage.setItem('theme', fetchedTheme);
+//         localStorage.setItem('language', fetchedLanguage);
 //       } catch (err) {
 //         console.error('Failed to fetch profile:', err.response?.data?.error || err.message);
 //         setError(t('header.error_fetching_profile', { error: err.response?.data?.error || err.message }));
@@ -310,31 +454,30 @@ export default Header;
 
 //   useEffect(() => {
 //     if (!auth?.token) return;
-
 //     fetchProfile();
 //   }, [auth?.token, fetchProfile]);
 
 //   const toggleTheme = useCallback(
 //     debounce(async () => {
-//       if (!auth?.token) {
-//         memoizedNavigate('/login');
-//         return;
-//       }
 //       const newTheme = theme === 'light' ? 'dark' : 'light';
-//       try {
-//         await axios.put(
-//           `${import.meta.env.VITE_API_URL}/api/auth/profile`,
-//           { theme_preference: newTheme },
-//           { headers: { Authorization: `Bearer ${auth.token}` } }
-//         );
-//         setTheme(newTheme);
-//         document.documentElement.classList.toggle('dark', newTheme === 'dark');
-//       } catch (err) {
-//         console.error('Failed to update theme preference:', err.response?.data?.error || err.message);
-//         setError(t('header.error_updating_theme', { error: err.response?.data?.error || err.message }));
-//         if (err.response?.status === 401) {
-//           memoizedLogout();
-//           memoizedNavigate('/login');
+//       setTheme(newTheme);
+//       document.documentElement.classList.toggle('dark', newTheme === 'dark');
+//       localStorage.setItem('theme', newTheme);
+
+//       if (auth?.token) {
+//         try {
+//           await axios.put(
+//             `${import.meta.env.VITE_API_URL}/api/auth/profile`,
+//             { theme_preference: newTheme },
+//             { headers: { Authorization: `Bearer ${auth.token}` } }
+//           );
+//         } catch (err) {
+//           console.error('Failed to update theme preference:', err.response?.data?.error || err.message);
+//           setError(t('header.error_updating_theme', { error: err.response?.data?.error || err.message }));
+//           if (err.response?.status === 401) {
+//             memoizedLogout();
+//             memoizedNavigate('/login');
+//           }
 //         }
 //       }
 //     }, 500),
@@ -344,7 +487,6 @@ export default Header;
 //   const handleLanguageChange = useCallback(
 //     debounce(async (lang) => {
 //       if (auth?.token) {
-//         // For authenticated users, update via API
 //         try {
 //           await axios.put(
 //             `${import.meta.env.VITE_API_URL}/api/auth/profile`,
@@ -363,10 +505,9 @@ export default Header;
 //           }
 //         }
 //       } else {
-//         // For unauthenticated users, change locally and persist
 //         setLanguage(lang);
 //         i18n.changeLanguage(lang);
-//         localStorage.setItem('language', lang); // Persist language choice
+//         localStorage.setItem('language', lang);
 //         if (changeLanguage) changeLanguage(lang);
 //       }
 //     }, 500),
@@ -379,47 +520,61 @@ export default Header;
 //   };
 
 //   return (
-//     <header className="bg-gradient-to-r from-gray-900 to-gray-800 text-white shadow-lg">
+//     <header className="bg-gradient-to-r from-teal-700 to-teal-600 dark:from-indigo-900 dark:to-indigo-800 text-white dark:text-gray-100 shadow-lg">
 //       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 //         <div className="flex justify-between items-center h-20">
-//           <h1 className="text-3xl font-bold tracking-wide text-teal-300">{t('app.title')}✓</h1>
+//           <h1 className="text-3xl font-bold tracking-wide text-teal-100 dark:text-indigo-200">{t('app.title')}✓</h1>
 
-//           {error && <p className="text-red-300 text-sm absolute top-6 right-6 bg-red-900/50 p-2 rounded">{error}</p>}
+//           {error && <p className="text-red-300 text-sm absolute top-6 right-6 bg-red-900/50 dark:bg-red-800/50 p-2 rounded">{error}</p>}
 
 //           <div className="flex items-center space-x-6">
 //             <nav className="hidden md:flex items-center space-x-6">
-//               <Link to="/" className="hover:text-teal-300 transition duration-300 font-semibold">{t('header.home')}</Link>
+//               <Link to="/" className="hover:text-teal-100 dark:hover:text-indigo-200 transition duration-300 font-semibold">{t('header.home')}</Link>
 //               {auth?.token ? (
 //                 <>
-//                   <Link to="/personal" className="hover:text-teal-300 transition duration-300 font-semibold">{t('header.personal')}</Link>
+//                   <Link to="/personal" className="hover:text-teal-100 dark:hover:text-indigo-200 transition duration-300 font-semibold">{t('header.personal')}</Link>
 //                   <button
 //                     onClick={handleLogout}
-//                     className="hover:text-red-300 transition duration-300 font-semibold"
+//                     className="hover:text-red-300 dark:hover:text-red-200 transition duration-300 font-semibold"
 //                   >
 //                     {t('header.logout')}
 //                   </button>
 //                 </>
 //               ) : (
 //                 <>
-//                   <Link to="/login" className="hover:text-blue-300 transition duration-300 font-semibold">{t('header.login')}</Link>
-//                   <Link to="/register" className="hover:text-blue-300 transition duration-300 font-semibold">{t('header.register')}</Link>
+//                   <Link to="/login" className="hover:text-blue-300 dark:hover:text-blue-200 transition duration-300 font-semibold">{t('header.login')}</Link>
+//                   <Link to="/register" className="hover:text-blue-300 dark:hover:text-blue-200 transition duration-300 font-semibold">{t('header.register')}</Link>
 //                 </>
 //               )}
 //               <select
 //                 value={language}
 //                 onChange={(e) => handleLanguageChange(e.target.value)}
-//                 className="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:outline-none focus:ring-2 focus:ring-teal-400 transition duration-300"
+//                 className="bg-teal-800 dark:bg-indigo-700 text-white dark:text-gray-100 px-4 py-2 rounded-lg border border-teal-600 dark:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400 transition duration-300"
 //               >
-//                 <option value="en" className="bg-gray-800">{t('header.english')}</option>
-//                 <option value="es" className="bg-gray-800">{t('header.spanish')}</option>
+//                 <option value="en" className="bg-teal-800 dark:bg-indigo-700">{t('header.english')}</option>
+//                 <option value="es" className="bg-teal-800 dark:bg-indigo-700">{t('header.spanish')}</option>
 //               </select>
+//               <button
+//                 onClick={toggleTheme}
+//                 className="p-2 rounded-lg bg-teal-700 dark:bg-indigo-700 hover:bg-teal-600 dark:hover:bg-indigo-600 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400"
+//                 aria-label={theme === 'light' ? t('header.switch_to_dark_mode') : t('header.switch_to_light_mode')}
+//               >
+//                 {theme === 'light' ? (
+//                   <svg className="w-6 h-6 text-yellow-300 dark:text-yellow-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+//                   </svg>
+//                 ) : (
+//                   <svg className="w-6 h-6 text-gray-300 dark:text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+//                   </svg>
+//                 )}
+//               </button>
 //             </nav>
 
-//             {/* Mobile Menu Button */}
 //             <div className="md:hidden">
 //               <button
 //                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-//                 className="text-white focus:outline-none"
+//                 className="text-white dark:text-gray-100 focus:outline-none"
 //               >
 //                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 //                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
@@ -427,34 +582,54 @@ export default Header;
 //               </button>
 //             </div>
 
-//             {/* Mobile Menu */}
 //             {isMenuOpen && (
-//               <div className="absolute top-20 right-4 w-48 bg-gray-800 rounded-lg shadow-lg p-4 md:hidden z-50">
-//                 <Link to="/" className="block px-4 py-2 hover:bg-gray-700 rounded text-white" onClick={() => setIsMenuOpen(false)}>{t('header.home')}</Link>
+//               <div className="absolute top-20 right-4 w-48 bg-teal-800 dark:bg-indigo-700 rounded-lg shadow-lg p-4 md:hidden z-50">
+//                 <Link to="/" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.home')}</Link>
 //                 {auth?.token ? (
 //                   <>
-//                     <Link to="/personal" className="block px-4 py-2 hover:bg-gray-700 rounded text-white" onClick={() => setIsMenuOpen(false)}>{t('header.personal')}</Link>
+//                     <Link to="/personal" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.personal')}</Link>
 //                     <button
 //                       onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-//                       className="block w-full text-left px-4 py-2 hover:bg-red-700 rounded text-white"
+//                       className="block w-full text-left px-4 py-2 hover:bg-red-700 dark:hover:bg-red-600 rounded text-white dark:text-gray-100"
 //                     >
 //                       {t('header.logout')}
 //                     </button>
 //                   </>
 //                 ) : (
 //                   <>
-//                     <Link to="/login" className="block px-4 py-2 hover:bg-gray-700 rounded text-white" onClick={() => setIsMenuOpen(false)}>{t('header.login')}</Link>
-//                     <Link to="/register" className="block px-4 py-2 hover:bg-gray-700 rounded text-white" onClick={() => setIsMenuOpen(false)}>{t('header.register')}</Link>
+//                     <Link to="/login" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.login')}</Link>
+//                     <Link to="/register" className="block px-4 py-2 hover:bg-teal-700 dark:hover:bg-indigo-600 rounded text-white dark:text-gray-100" onClick={() => setIsMenuOpen(false)}>{t('header.register')}</Link>
 //                   </>
 //                 )}
 //                 <select
 //                   value={language}
 //                   onChange={(e) => { handleLanguageChange(e.target.value); setIsMenuOpen(false); }}
-//                   className="w-full bg-gray-700 text-white px-4 py-2 mt-2 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-teal-400"
+//                   className="w-full bg-teal-700 dark:bg-indigo-600 text-white dark:text-gray-100 px-4 py-2 mt-2 rounded-lg border border-teal-600 dark:border-indigo-600 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400"
 //                 >
-//                   <option value="en" className="bg-gray-700">{t('header.english')}</option>
-//                   <option value="es" className="bg-gray-700">{t('header.spanish')}</option>
+//                   <option value="en" className="bg-teal-700 dark:bg-indigo-600">{t('header.english')}</option>
+//                   <option value="es" className="bg-teal-700 dark:bg-indigo-600">{t('header.spanish')}</option>
 //                 </select>
+//                 <button
+//                   onClick={() => { toggleTheme(); setIsMenuOpen(false); }}
+//                   className="w-full flex items-center px-4 py-2 mt-2 rounded-lg bg-teal-700 dark:bg-indigo-600 hover:bg-teal-600 dark:hover:bg-indigo-500 transition duration-300 focus:outline-none focus:ring-2 focus:ring-teal-400 dark:focus:ring-indigo-400 text-white dark:text-gray-100"
+//                   aria-label={theme === 'light' ? t('header.switch_to_dark_mode') : t('header.switch_to_light_mode')}
+//                 >
+//                   {theme === 'light' ? (
+//                     <>
+//                       <svg className="w-6 h-6 text-yellow-300 dark:text-yellow-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+//                       </svg>
+//                       {t('header.switch_to_dark_mode')}
+//                     </>
+//                   ) : (
+//                     <>
+//                       <svg className="w-6 h-6 text-gray-300 dark:text-gray-200 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+//                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+//                       </svg>
+//                       {t('header.switch_to_light_mode')}
+//                     </>
+//                   )}
+//                 </button>
 //               </div>
 //             )}
 //           </div>
