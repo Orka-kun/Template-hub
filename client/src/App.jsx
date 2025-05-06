@@ -43,7 +43,7 @@ function App() {
   return (
     <I18nextProvider i18n={i18n}>
       <AuthProvider>
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <div className="min-h-screen" style={{ backgroundColor: `var(--bg-color)`, color: `var(--text-color)` }}>
           <Header changeLanguage={(lang) => i18n.changeLanguage(lang)} />
           <Routes>
             <Route path="/" element={<Home />} />
