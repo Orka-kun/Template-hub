@@ -222,7 +222,10 @@ function PersonalPage() {
           //   color: `var(--text-color)`,
           //   backgroundColor: `var(--card-bg)`,
           // }}
-          className="text-lg md:text-xl font-semibold rounded-lg p-3 inline-block text-white"
+          className="text-lg md:text-xl font-semibold rounded-lg p-3 inline-block "
+          style={{
+            color: `var(--header-text)`,
+          }}
         >
           {t('personal.logged_in_as')}: {auth.user.name}
         </h2>
@@ -241,6 +244,7 @@ function PersonalPage() {
       </header>
 
       <div className="mb-8 flex justify-center">
+        {/* Create Template Button */}
         <Link
           to="/templates/create"
           style={{
@@ -379,7 +383,7 @@ function PersonalPage() {
   );
 }
 
-export default PersonalPage;
+export default PersonalPage; 
 // import React, { useState, useEffect, useCallback, useRef } from 'react';
 // import { useTranslation } from 'react-i18next';
 // import { Link, useNavigate } from 'react-router-dom';
@@ -526,7 +530,7 @@ export default PersonalPage;
 
 //   // Fetch data on mount
 //   useEffect(() => {
-//     if (!authRef.current.token || !authRef.current.user?.id) return;
+//     if (!authRef.current.token || !authRef.current.user.id) return;
 //     debouncedFetchData();
 //   }, [debouncedFetchData]);
 
@@ -597,53 +601,81 @@ export default PersonalPage;
 //   if (!auth.token) return null;
 
 //   return (
-//     <div className="container mx-auto p-6 bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-gray-800 dark:to-black min-h-screen">
+//     <div className="container mx-auto p-6 min-h-screen">
 //       <div className="mb-8">
-//         <h2 className="text-lg md:text-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg p-3 inline-block">
+//         <h2
+//           // style={{
+//           //   color: `var(--text-color)`,
+//           //   backgroundColor: `var(--card-bg)`,
+//           // }}
+//           className="text-lg md:text-xl font-semibold rounded-lg p-3 inline-block text-white"
+//         >
 //           {t('personal.logged_in_as')}: {auth.user.name}
 //         </h2>
 //       </div>
 
-//       <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 animate-fade-in mb-8">
-//         {t('personal.title')}
-//       </h1>
+//       <header className="text-center mb-10">
+//         <h1
+//           style={{
+//             color: `var(--text-white)`,
+//             backgroundImage: `linear-gradient(to right, var(--table-header-from), var(--table-header-to))`,
+//           }}
+//           className="text-3xl md:text-4xl font-extrabold bg-clip-text animate-fade-in "
+//         >
+//           {t('personal.title')}
+//         </h1>
+//       </header>
 
-//       <div className="mb-8">
+//       <div className="mb-8 flex justify-center">
 //         <Link
 //           to="/templates/create"
-//           className="inline-block bg-blue-600 text-white px-6 py-3 rounded-full hover:bg-blue-700 transition-colors shadow-lg transform hover:-translate-y-1"
+//           style={{
+//             backgroundColor: `var(--table-header-from)`,
+//             color: '#ffffff',
+//           }}
+//           className="inline-block px-6 py-3 rounded-full hover:opacity-80 transition-colors shadow-lg transform hover:-translate-y-1"
 //         >
 //           {t('personal.create_template')}
 //         </Link>
 //       </div>
 
 //       <section className="mb-12">
-//         <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100 border-b-2 border-blue-500 pb-2 mb-6">
+//         <h2
+//           style={{ borderColor: `var(--table-header-from)` }}
+//           className="text-2xl font-semibold text-center mb-6 border-b-2 pb-2"
+//         >
 //           {t('personal.templates')}
 //         </h2>
 //         {loading && (
-//           <p className="text-lg text-gray-600 dark:text-gray-300 animate-pulse text-center">
-//             {t('loading')}
-//           </p>
+//           <p className="text-lg animate-pulse text-center">{t('loading')}</p>
 //         )}
 //         {error && (
-//           <p className="text-red-500 text-lg font-medium bg-red-50 dark:bg-red-900/50 rounded-lg p-4 text-center">
+//           <p
+//             style={{ color: '#ef4444' }}
+//             className="text-lg font-medium rounded-lg p-4 text-center"
+//           >
 //             {error}
 //           </p>
 //         )}
 //         {!loading && !error && items.length === 0 && (
-//           <p className="text-gray-600 dark:text-gray-400 text-lg text-center">
-//             {t('personal.no_templates')}
-//           </p>
+//           <p className="text-center text-lg">{t('personal.no_templates')}</p>
 //         )}
 //         {!loading && !error && items.length > 0 && (
 //           <>
-//             <div className="overflow-x-auto rounded-xl shadow-lg">
-//               <table className="w-full border-collapse text-sm bg-white dark:bg-gray-800">
+//             <div className="overflow-x-auto max-w-4xl mx-auto">
+//               <table
+//                 style={{ backgroundColor: `var(--card-bg)` }}
+//                 className="w-full shadow-md rounded-lg overflow-hidden"
+//               >
 //                 <thead>
-//                   <tr className="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+//                   <tr
+//                     style={{
+//                       background: `linear-gradient(to right, var(--table-header-from), var(--table-header-to))`,
+//                     }}
+//                     className="text-white"
+//                   >
 //                     <th
-//                       className="border-b border-gray-200 dark:border-gray-600 p-4 text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-300"
+//                       className="p-4 text-left font-medium cursor-pointer"
 //                       onClick={() => handleSort('title')}
 //                     >
 //                       {t('template.title')}{' '}
@@ -652,7 +684,7 @@ export default PersonalPage;
 //                       )}
 //                     </th>
 //                     <th
-//                       className="border-b border-gray-200 dark:border-gray-600 p-4 text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-300"
+//                       className="p-4 text-left font-medium cursor-pointer"
 //                       onClick={() => handleSort('createdAt')}
 //                     >
 //                       {t('personal.created_at')}{' '}
@@ -660,38 +692,46 @@ export default PersonalPage;
 //                         <span className="ml-1">{sortConfig.order === 'asc' ? '↑' : '↓'}</span>
 //                       )}
 //                     </th>
-//                     <th className="border-b border-gray-200 dark:border-gray-600 p-4 text-left text-gray-900 dark:text-gray-100">
-//                       {t('personal.actions')}
-//                     </th>
+//                     <th className="p-4 text-left font-medium">{t('personal.actions')}</th>
 //                   </tr>
 //                 </thead>
 //                 <tbody>
 //                   {paginatedItems.map((item) => (
 //                     <tr
 //                       key={`${item.type}-${item.id}`}
-//                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-300"
+//                       className="hover:bg-gray-100 transition-colors"
 //                     >
-//                       <td className="border-b border-gray-200 dark:border-gray-600 p-4 text-blue-600 dark:text-blue-400">
+//                       <td className="p-4 border-b">
 //                         <Link
 //                           to={
 //                             item.type === 'shared_template'
 //                               ? `/templates/${item.id}`
 //                               : `/templates/${item.template?.id || item.id}`
 //                           }
+//                           style={{
+//                             color: `var(--accent-color)`,
+//                           }}
 //                           className="hover:underline font-medium"
 //                         >
 //                           {item.title || t('personal.unknown_template')}
 //                         </Link>
 //                       </td>
-//                       <td className="border-b border-gray-200 dark:border-gray-600 p-4 text-gray-800 dark:text-gray-300">
+//                       <td
+//                         style={{ color: `var(--card-description)` }}
+//                         className="p-4 border-b "
+//                       >
 //                         {item.createdAt
 //                           ? new Date(item.createdAt).toLocaleDateString()
 //                           : t('personal.unknown_date')}
 //                       </td>
-//                       <td className="border-b border-gray-200 dark:border-gray-600 p-4">
+//                       <td className="p-4 border-b">
 //                         <button
 //                           onClick={() => handleDelete(item)}
-//                           className="bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-full transition-colors shadow-md transform hover:-translate-y-1"
+//                           style={{
+//                             backgroundColor: '#ef4444',
+//                             color: '#ffffff',
+//                           }}
+//                           className="text-sm px-4 py-2 rounded-full hover:opacity-80 transition-colors shadow-md transform hover:-translate-y-1"
 //                         >
 //                           {t('personal.delete')}
 //                         </button>
@@ -703,16 +743,16 @@ export default PersonalPage;
 //             </div>
 
 //             <div className="flex justify-center items-center space-x-2 py-6">
-//               <span className="text-gray-700 dark:text-gray-300 font-medium">Page:</span>
+//               <span className="font-medium">Page :</span>
 //               {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
 //                 <button
 //                   key={page}
 //                   onClick={() => setCurrentPage(page)}
-//                   className={`px-4 py-2 rounded-full mx-1 transition-colors duration-300 ${
-//                     currentPage === page
-//                       ? 'bg-blue-600 text-white shadow-lg'
-//                       : 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500'
-//                   }`}
+//                   style={{
+//                     backgroundColor: currentPage === page ? `var(--table-header-from)` : `var(--card-bg)`,
+//                     color: currentPage === page ? '#ffffff' : `var(--text-color)`,
+//                   }}
+//                   className="px-4 py-2 rounded-full mx-1 transition-colors duration-300 shadow-md hover:opacity-80"
 //                 >
 //                   {page}
 //                 </button>
